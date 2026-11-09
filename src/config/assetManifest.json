@@ -1,0 +1,173 @@
+[
+  {
+    "id": "hero-main",
+    "title": "Roar Fitness Interior Arena",
+    "folder": "hero",
+    "fileName": "hero-main.jpg",
+    "localPath": "src/assets/roar/hero/hero-main.jpg",
+    "category": "hero",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "roar-branding-signage",
+    "title": "Roar Extreme Wall Graphics & Logo",
+    "folder": "branding",
+    "fileName": "roar-branding-signage.jpg",
+    "localPath": "src/assets/roar/branding/roar-branding-signage.jpg",
+    "category": "branding",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "interior-floor",
+    "title": "Main Gym Floor & Racks",
+    "folder": "gym-interior",
+    "fileName": "interior-floor.jpg",
+    "localPath": "src/assets/roar/gym-interior/interior-floor.jpg",
+    "category": "gym-interior",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "strength-dumbbells",
+    "title": "Dumbbells & Free Weights Lineup",
+    "folder": "strength-training",
+    "fileName": "strength-dumbbells.jpg",
+    "localPath": "src/assets/roar/strength-training/strength-dumbbells.jpg",
+    "category": "strength-training",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "bench-press-station",
+    "title": "Olympic Flat & Incline Benches",
+    "folder": "strength-training",
+    "fileName": "bench-press-station.jpg",
+    "localPath": "src/assets/roar/strength-training/bench-press-station.jpg",
+    "category": "strength-training",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "cardio-treadmills",
+    "title": "Cardio Deck & Treadmills",
+    "folder": "cardio",
+    "fileName": "cardio-treadmills.jpg",
+    "localPath": "src/assets/roar/cardio/cardio-treadmills.jpg",
+    "category": "cardio",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "functional-rig",
+    "title": "Crossfit & Functional Zone",
+    "folder": "group-fitness",
+    "fileName": "functional-rig.jpg",
+    "localPath": "src/assets/roar/group-fitness/functional-rig.jpg",
+    "category": "group-fitness",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "zumba-dance-floor",
+    "title": "Zumba & Aerobics Studio Space",
+    "folder": "group-fitness",
+    "fileName": "zumba-dance-floor.jpg",
+    "localPath": "src/assets/roar/group-fitness/zumba-dance-floor.jpg",
+    "category": "group-fitness",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "combat-kickboxing",
+    "title": "Combat & Kickboxing Training Area",
+    "folder": "kickboxing",
+    "fileName": "combat-kickboxing.jpg",
+    "localPath": "src/assets/roar/kickboxing/combat-kickboxing.jpg",
+    "category": "kickboxing",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "facility-aircon",
+    "title": "Climate Controlled Training Floor",
+    "folder": "facilities",
+    "fileName": "facility-aircon.jpg",
+    "localPath": "src/assets/roar/facilities/facility-aircon.jpg",
+    "category": "facilities",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "lockers-changing",
+    "title": "Changing Rooms & Personal Lockers",
+    "folder": "facilities",
+    "fileName": "lockers-changing.jpg",
+    "localPath": "src/assets/roar/facilities/lockers-changing.jpg",
+    "category": "facilities",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-01",
+    "title": "Strength Stations",
+    "folder": "gallery",
+    "fileName": "gallery-01.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-01.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-02",
+    "title": "Weight Stacks",
+    "folder": "gallery",
+    "fileName": "gallery-02.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-02.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-03",
+    "title": "Cardio Ellipticals",
+    "folder": "gallery",
+    "fileName": "gallery-03.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-03.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-04",
+    "title": "Leg Press Machine",
+    "folder": "gallery",
+    "fileName": "gallery-04.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-04.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-05",
+    "title": "Barbells & Plates",
+    "folder": "gallery",
+    "fileName": "gallery-05.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-05.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  },
+  {
+    "id": "gallery-06",
+    "title": "Personal Trainer Coaching Station",
+    "folder": "gallery",
+    "fileName": "gallery-06.jpg",
+    "localPath": "src/assets/roar/gallery/gallery-06.jpg",
+    "category": "gallery",
+    "source": "Magicpin Verified Roar Fitness Listing Gallery",
+    "status": "integrated"
+  }
+]
+
