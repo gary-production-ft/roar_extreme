@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -58,8 +59,10 @@ app.use('/api', globalLimiter);
 
 // Health check
 app.get('/health', (req, res) => {
+  const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   res.json({
     status: 'healthy',
+    database: dbStates[mongoose.connection.readyState] || 'unknown',
     timestamp: new Date().toISOString(),
     service: 'roar-extreme-api',
   });
