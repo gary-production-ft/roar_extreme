@@ -377,6 +377,33 @@ Automated Playwright test checking:
 
 ---
 
+## ☁️ Deployment Guide (Render / Cloud Platforms)
+
+You can host the backend API (or both frontend & backend together) seamlessly on [Render.com](https://render.com) using a Web Service:
+
+### Render Web Service Settings
+
+* **Environment:** `Node`
+* **Root Directory:** Leave empty (uses repo root)
+* **Build Command:** `npm run build` *(installs root & backend dependencies, then builds the React app)*
+* **Start Command:** `npm run server` *(or `npm start`)*
+
+### Required Environment Variables on Render
+Add these under **Environment Variables** in the Render Dashboard:
+
+| Variable | Description / Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `MONGO_URI` | Your MongoDB Atlas connection string (`mongodb+srv://...`) |
+| `JWT_SECRET` | A secure random 32+ character string |
+| `GEMINI_API_KEY` | Your Google Gemini API key |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
+| `CLIENT_URL` | Your Render app URL or custom domain (e.g. `https://roar-extreme.onrender.com`) |
+
+> **Note on Static Frontend:** The backend automatically serves the production frontend from `/dist` whenever it exists, enabling a complete full-stack single-service deployment!
+
+---
+
 ## 📍 Location & Verified Business Details
 
 * **Studio Name:** ROAR EXTREME (Roar Fitness)

@@ -6,7 +6,7 @@ import { logger } from './utils/logger.js';
 async function bootstrap() {
   await connectDatabase();
 
-  const server = app.listen(env.port, () => {
+  const server = app.listen(env.port, '0.0.0.0', () => {
     logger.info(`ROAR EXTREME Backend running on port ${env.port} [${env.nodeEnv}]`);
   });
 
