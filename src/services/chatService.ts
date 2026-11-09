@@ -5,6 +5,8 @@
  * memory persistence, and consent preferences.
  */
 
+import { apiUrl } from '../config/api';
+
 export interface ChatMessageItem {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -53,7 +55,7 @@ export class ChatService {
     }
 
     try {
-      const res = await fetch('/api/chat/session', {
+      const res = await fetch(apiUrl('/api/chat/session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,7 +100,7 @@ export class ChatService {
     const visitorId = this.getVisitorId();
 
     try {
-      const response = await fetch('/api/chat/message', {
+      const response = await fetch(apiUrl('/api/chat/message'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +187,7 @@ export class ChatService {
     const visitorId = this.getVisitorId();
 
     try {
-      const res = await fetch(`/api/preferences?sessionId=${encodeURIComponent(sessionId)}&visitorId=${encodeURIComponent(visitorId)}`);
+      const res = await fetch(apiUrl(`/api/preferences?sessionId=${encodeURIComponent(sessionId)}&visitorId=${encodeURIComponent(visitorId)}`));
       if (res.ok) {
         const data = await res.json();
         return {
@@ -205,7 +207,7 @@ export class ChatService {
     const visitorId = this.getVisitorId();
 
     try {
-      const res = await fetch('/api/preferences', {
+      const res = await fetch(apiUrl('/api/preferences'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,7 +230,7 @@ export class ChatService {
     const visitorId = this.getVisitorId();
 
     try {
-      const res = await fetch('/api/preferences', {
+      const res = await fetch(apiUrl('/api/preferences'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, visitorId }),

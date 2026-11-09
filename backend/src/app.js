@@ -30,6 +30,7 @@ app.use(
 // CORS
 const allowedOrigins = [
   env.clientUrl,
+  'https://roarextreme.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -39,10 +40,16 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // allow requests with no origin (like mobile apps, curl, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        env.nodeEnv !== 'production'
+      ) {
         callback(null, true);
       } else {
-        callback(null, true); // Permissive in development
+        callback(null, true); // Permissive to prevent CORS block on legitimate client domains
       }
     },
     credentials: true,

@@ -12,6 +12,7 @@ import {
   Save,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { apiUrl } from '../../config/api';
 
 interface KnowledgeDoc {
   _id: string;
@@ -49,7 +50,7 @@ export const AdminKnowledge: React.FC = () => {
   const fetchKnowledge = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/knowledge', {
+      const res = await fetch(apiUrl('/api/knowledge'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -104,7 +105,7 @@ export const AdminKnowledge: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`/api/knowledge/${id}`, {
+      const res = await fetch(apiUrl(`/api/knowledge/${id}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -128,7 +129,7 @@ export const AdminKnowledge: React.FC = () => {
       const url = editingDocId ? `/api/knowledge/${editingDocId}` : '/api/knowledge';
       const method = editingDocId ? 'PATCH' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetch(apiUrl(url), {
         method,
         headers: {
           'Content-Type': 'application/json',

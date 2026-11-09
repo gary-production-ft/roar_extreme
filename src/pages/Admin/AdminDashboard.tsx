@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { apiUrl } from '../../config/api';
 
 interface RecentLead {
   _id: string;
@@ -63,7 +64,7 @@ export const AdminDashboard: React.FC = () => {
     setError(null);
 
     try {
-      const res = await fetch('/api/dashboard', {
+      const res = await fetch(apiUrl('/api/dashboard'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

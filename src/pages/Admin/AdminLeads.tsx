@@ -21,6 +21,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { apiUrl } from '../../config/api';
 
 interface LeadItem {
   _id: string;
@@ -78,7 +79,7 @@ export const AdminLeads: React.FC = () => {
         ...(goalFilter ? { goal: goalFilter } : {}),
       });
 
-      const res = await fetch(`/api/leads?${query.toString()}`, {
+      const res = await fetch(apiUrl(`/api/leads?${query.toString()}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -110,7 +111,7 @@ export const AdminLeads: React.FC = () => {
   const handleStatusChange = async (leadId: string, nextStatus: string) => {
     setUpdatingId(leadId);
     try {
-      const res = await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(apiUrl(`/api/leads/${leadId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export const AdminLeads: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(apiUrl(`/api/leads/${leadId}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -159,7 +160,7 @@ export const AdminLeads: React.FC = () => {
     setAddError(null);
 
     try {
-      const res = await fetch('/api/leads', {
+      const res = await fetch(apiUrl('/api/leads'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,7 +196,7 @@ export const AdminLeads: React.FC = () => {
     setIsSavingNotes(true);
 
     try {
-      const res = await fetch(`/api/leads/${activeNotesLead._id}`, {
+      const res = await fetch(apiUrl(`/api/leads/${activeNotesLead._id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -218,7 +219,7 @@ export const AdminLeads: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    window.open(`/api/leads/export/csv?token=${encodeURIComponent(token || '')}`, '_blank');
+    window.open(apiUrl(`/api/leads/export/csv?token=${encodeURIComponent(token || '')}`), '_blank');
   };
 
   const getStatusBadge = (status: string) => {

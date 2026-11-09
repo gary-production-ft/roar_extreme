@@ -5,6 +5,7 @@
  */
 
 import type { LeadFormData, LeadSubmissionResult } from '../types/lead.ts';
+import { apiUrl } from '../config/api';
 
 function generateBookingReference(): string {
   const prefix = 'ROAR';
@@ -15,7 +16,7 @@ function generateBookingReference(): string {
 
 export async function submitLead(data: LeadFormData): Promise<LeadSubmissionResult> {
   try {
-    const response = await fetch('/api/leads', {
+    const response = await fetch(apiUrl('/api/leads'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

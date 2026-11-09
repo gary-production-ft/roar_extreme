@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 interface AdminUser {
   id: string;
@@ -31,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch(apiUrl('/api/auth/me'), {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -63,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
     } catch {
       // Ignore network errors on logout
     }
