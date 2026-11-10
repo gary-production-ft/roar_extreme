@@ -32,30 +32,35 @@ app.use(
 const allowedOrigins = [
   env.clientUrl,
   'https://roarextreme.vercel.app',
+  'https://roar-extreme.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps, curl, server-to-server)
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.onrender.com') ||
-        env.nodeEnv !== 'production'
-      ) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Permissive to prevent CORS block on legitimate client domains
-      }
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com') ||
+      env.nodeEnv !== 'production'
+    ) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Permissive to prevent CORS block on legitimate client domains
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parsers & cookies
 app.use(express.json({ limit: '1mb' }));
@@ -66,7 +71,7 @@ app.use(cookieParser());
 app.use('/api', globalLimiter);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   const state = dbStates[mongoose.connection.readyState] || 'unknown';
   res.json({
