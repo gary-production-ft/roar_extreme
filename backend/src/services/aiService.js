@@ -9,6 +9,31 @@ import { getPreferences, extractPotentialPreferences } from './memoryService.js'
 let geminiClient = null;
 let openaiClient = null;
 
+/**
+ * Categorize Gemini API errors into actionable diagnostic categories.
+ */
+export function categorizeGeminiError(err) {
+  if (!env.geminiApiKey) return 'GEMINI_API_KEY_MISSING';
+  const msg = (err?.message || '').toLowerCase();
+  const status = err?.status || err?.statusCode;
+  if (status === 404 || msg.includes('not found') || msg.includes('model not supported')) {
+    return 'GEMINI_MODEL_INVALID';
+  }
+  if (status === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'GEMINI_RATE_LIMIT';
+  }
+  if (msg.includes('quota') || msg.includes('resource_exhausted')) {
+    return 'GEMINI_QUOTA_EXCEEDED';
+  }
+  if (msg.includes('timeout') || msg.includes('deadline') || msg.includes('timed out')) {
+    return 'GEMINI_TIMEOUT';
+  }
+  if (msg.includes('fetch failed') || msg.includes('econnrefused') || msg.includes('network')) {
+    return 'GEMINI_NETWORK_ERROR';
+  }
+  return 'BACKEND_ERROR';
+}
+
 function getGeminiClient() {
   if (!geminiClient && env.geminiApiKey) {
     geminiClient = new GoogleGenAI({ apiKey: env.geminiApiKey });
@@ -197,9 +222,12 @@ export async function generateChatStream({
 
   // 6. Primary Provider: Google Gemini API (Google AI Studio)
   const gemini = getGeminiClient();
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const startTime = Date.now();
+
   if (gemini) {
     try {
-      logger.info(`Routing chat to Google Gemini (${env.geminiModel}) for session [${sessionId}]`);
+      logger.info(`[CHAT] [${requestId}] Starting Gemini request. Model: ${env.geminiModel}, Session: [${sessionId}]`);
 
       // Strictly alternating sanitized history for Gemini
       const contents = sanitizeGeminiTurns(messages, lastUserMsg);
@@ -222,16 +250,59 @@ export async function generateChatStream({
         }
       }
 
+      const durationMs = Date.now() - startTime;
+      logger.info(`[CHAT] [${requestId}] Gemini stream completed in ${durationMs}ms`);
+
       onEvent({
         type: 'message_complete',
         fullResponse,
         content: fullResponse,
         potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
+        provider: 'gemini',
       });
 
       return fullResponse;
     } catch (err) {
-      logger.warn(`Google Gemini streaming failed: ${err.message}. Checking fallbacks...`);
+      const durationMs = Date.now() - startTime;
+      const errorCategory = categorizeGeminiError(err);
+      logger.warn(`[CHAT] [${requestId}] Gemini error [${errorCategory}] after ${durationMs}ms: ${err.message}`);
+
+      // If configured model was not found, attempt recovery with verified standard model
+      if (errorCategory === 'GEMINI_MODEL_INVALID' && env.geminiModel !== 'gemini-2.5-flash') {
+        try {
+          logger.info(`[CHAT] [${requestId}] Recovering with standard supported model 'gemini-2.5-flash'...`);
+          const contents = sanitizeGeminiTurns(messages, lastUserMsg);
+          const fallbackStream = await gemini.models.generateContentStream({
+            model: 'gemini-2.5-flash',
+            contents,
+            config: {
+              systemInstruction: systemPrompt,
+              temperature: 0.7,
+            },
+          });
+
+          let fullResponse = '';
+          for await (const chunk of fallbackStream) {
+            const textChunk = chunk.text || '';
+            if (textChunk) {
+              fullResponse += textChunk;
+              onEvent({ type: 'text_delta', content: textChunk, text: textChunk });
+            }
+          }
+
+          onEvent({
+            type: 'message_complete',
+            fullResponse,
+            content: fullResponse,
+            potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
+            provider: 'gemini-2.5-flash',
+          });
+
+          return fullResponse;
+        } catch (recoveryErr) {
+          logger.warn(`[CHAT] [${requestId}] Model recovery failed: ${recoveryErr.message}`);
+        }
+      }
     }
   }
 
@@ -298,6 +369,8 @@ export async function generateChatStream({
     fullResponse: fallbackAnswer,
     content: fallbackAnswer,
     potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
+    provider: 'grounded_knowledge_fallback',
+    isFallback: true,
   });
 
   return fallbackAnswer;

@@ -39,6 +39,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [lastFailedText, setLastFailedText] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -94,6 +95,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
 
     setMessages((prev) => [...prev, userMessage, initialAssistantMsg]);
     setInputText('');
+    setLastFailedText(null);
     setIsStreaming(true);
     setShowScrollBottom(false);
 
@@ -130,8 +132,10 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
             )
           );
           setIsStreaming(false);
+          setLastFailedText(null);
         },
         onError: (err) => {
+          setLastFailedText(text);
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMsgId
@@ -150,7 +154,16 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
         },
       });
     } catch {
+      setLastFailedText(text);
       setIsStreaming(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastFailedText) {
+      const textToRetry = lastFailedText;
+      setLastFailedText(null);
+      handleSendMessage(textToRetry);
     }
   };
 
@@ -324,6 +337,18 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
                 onActionClick={handleActionClick}
               />
             ))}
+            {lastFailedText && !isStreaming && (
+              <div className="flex items-center justify-between gap-3 p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-200">
+                <span className="truncate">Connection interrupted. Could not deliver message.</span>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="px-3 py-1 bg-[#FF5A1F] text-black font-bold rounded-lg hover:bg-[#FF7545] transition-colors shrink-0 cursor-pointer text-xs"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
