@@ -28,30 +28,29 @@ app.use(
   })
 );
 
-// CORS
-const allowedOrigins = [
-  env.clientUrl,
+// Hardened Production CORS Configuration
+const explicitAllowedOrigins = new Set([
   'https://roarextreme.vercel.app',
   'https://roar-extreme.vercel.app',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:4173',
-];
+  ...(env.clientUrl ? [env.clientUrl.replace(/\/$/, '')] : []),
+  ...(env.nodeEnv !== 'production'
+    ? ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173']
+    : []),
+]);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      origin.endsWith('.onrender.com') ||
-      env.nodeEnv !== 'production'
-    ) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive to prevent CORS block on legitimate client domains
+    // Allow non-browser requests (e.g., server-to-server, health checks, cron)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (explicitAllowedOrigins.has(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS origin denied: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],

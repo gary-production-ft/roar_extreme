@@ -30,8 +30,8 @@ async function createAdmin() {
     await newAdmin.save();
     logger.info(`Admin created successfully:`);
     logger.info(`Email: ${email}`);
-    logger.info(`Password: ${password}`);
     logger.info(`Role: superadmin`);
+    logger.info(`Status: active [Password set and hashed with bcrypt]`);
   }
 
   await mongoose.disconnect();

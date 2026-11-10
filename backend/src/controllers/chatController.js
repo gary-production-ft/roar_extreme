@@ -20,11 +20,14 @@ export const messageSchema = z.object({
   body: z.object({
     sessionId: z.string().min(5),
     visitorId: z.string().optional(),
-    content: z.string().optional(),
-    message: z.string().optional(),
+    content: z.string().max(2000).optional(),
+    message: z.string().max(2000).optional(),
     language: z.enum(['en', 'hi', 'mr']).optional(),
-  }).refine((data) => data.content || data.message, {
-    message: 'Either content or message must be provided',
+  }).refine((data) => {
+    const text = (data.content || data.message || '').trim();
+    return text.length > 0 && text.length <= 2000;
+  }, {
+    message: 'Message cannot be empty and must not exceed 2000 characters',
     path: ['content'],
   }),
 });

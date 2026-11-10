@@ -1,17 +1,25 @@
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { MainLayout } from './layouts/MainLayout/MainLayout';
 import { Home } from './pages/Home/Home';
-import { About } from './pages/About/About';
-import { Training } from './pages/Training/Training';
-import { Registration } from './pages/Registration/Registration';
-import { NotFound } from './pages/NotFound/NotFound';
 import { AuthProvider } from './context/AuthContext';
-import { AdminLogin } from './pages/Admin/AdminLogin';
 import { AdminLayout } from './layouts/AdminLayout/AdminLayout';
-import { AdminDashboard } from './pages/Admin/AdminDashboard';
-import { AdminLeads } from './pages/Admin/AdminLeads';
-import { AdminKnowledge } from './pages/Admin/AdminKnowledge';
+
+// Lazy-loaded secondary & administrative routes for optimal code splitting
+const About = lazy(() => import('./pages/About/About').then((m) => ({ default: m.About })));
+const Training = lazy(() => import('./pages/Training/Training').then((m) => ({ default: m.Training })));
+const Registration = lazy(() => import('./pages/Registration/Registration').then((m) => ({ default: m.Registration })));
+const NotFound = lazy(() => import('./pages/NotFound/NotFound').then((m) => ({ default: m.NotFound })));
+const AdminLogin = lazy(() => import('./pages/Admin/AdminLogin').then((m) => ({ default: m.AdminLogin })));
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const AdminLeads = lazy(() => import('./pages/Admin/AdminLeads').then((m) => ({ default: m.AdminLeads })));
+const AdminKnowledge = lazy(() => import('./pages/Admin/AdminKnowledge').then((m) => ({ default: m.AdminKnowledge })));
+
+const PageLoader = () => (
+  <div className="min-h-[60vh] bg-[#080808] flex items-center justify-center">
+    <div className="w-8 h-8 rounded-full border-2 border-[#FF5A1F] border-t-transparent animate-spin" />
+  </div>
+);
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -37,52 +45,54 @@ export function App() {
     <AuthProvider>
       <Router>
         <ScrollToTop />
-        <Routes>
-          {/* Public Website Routes */}
-          <Route
-            path="/"
-            element={
-              <MainLayout>
-                <Home />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <MainLayout>
-                <About />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/training"
-            element={
-              <MainLayout>
-                <Training />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <MainLayout>
-                <Registration />
-              </MainLayout>
-            }
-          />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Website Routes */}
+            <Route
+              path="/"
+              element={
+                <MainLayout>
+                  <Home />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <MainLayout>
+                  <About />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/training"
+              element={
+                <MainLayout>
+                  <Training />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <MainLayout>
+                  <Registration />
+                </MainLayout>
+              }
+            />
 
-          {/* Admin Authentication & Management Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="leads" element={<AdminLeads />} />
-            <Route path="knowledge" element={<AdminKnowledge />} />
-          </Route>
+            {/* Admin Authentication & Management Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="leads" element={<AdminLeads />} />
+              <Route path="knowledge" element={<AdminKnowledge />} />
+            </Route>
 
-          {/* 404 Handler */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* 404 Handler */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

@@ -21,3 +21,38 @@ export const env = {
   memoryRetentionDays: parseInt(process.env.MEMORY_RETENTION_DAYS || '180', 10),
 };
 
+export function validateEnvironment(logger) {
+  const missing = [];
+  const warnings = [];
+
+  const hasMongo = Boolean(process.env.MONGO_URI || process.env.MONGODB_URI || process.env.mongodb);
+  if (!hasMongo) {
+    if (env.nodeEnv === 'production') {
+      missing.push('MONGO_URI');
+    } else {
+      warnings.push('MONGO_URI is unset; defaulting to local 127.0.0.1:27017.');
+    }
+  }
+
+  if (env.nodeEnv === 'production') {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production') {
+      warnings.push('JWT_SECRET is using a development fallback. Please set a dedicated production JWT secret.');
+    }
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY || process.env.Gemini || process.env.gemini);
+    if (!hasGemini) {
+      warnings.push('GEMINI_API_KEY is not configured. AI chatbot will operate using grounded local fallback.');
+    }
+  }
+
+  if (logger) {
+    for (const w of warnings) {
+      logger.warn(`[CONFIG] ${w}`);
+    }
+    for (const m of missing) {
+      logger.error(`[CONFIG] Missing critical environment variable: ${m}`);
+    }
+  }
+
+  return { isValid: missing.length === 0, missing, warnings };
+}
+

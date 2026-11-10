@@ -1,9 +1,11 @@
 import { app } from './app.js';
-import { env } from './config/environment.js';
+import { env, validateEnvironment } from './config/environment.js';
 import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
 
 async function bootstrap() {
+  validateEnvironment(logger);
+
   const server = app.listen(env.port, '0.0.0.0', () => {
     logger.info(`ROAR EXTREME Backend running on port ${env.port} [${env.nodeEnv}]`);
   });
