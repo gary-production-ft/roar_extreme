@@ -54,3 +54,4 @@ rotatePassword().catch((err) => {
   logger.error('Password rotation failed:', err.message);
   process.exit(1);
 });
+

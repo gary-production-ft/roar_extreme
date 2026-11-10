@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, ExternalLink, Lock } from 'lucide-react';
 import { businessConfig } from '../../config/business';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -110,6 +110,15 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-white/40 gap-4">
           <p>© {CURRENT_YEAR} {businessConfig.name} Extreme {businessConfig.city}. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/admin/login"
+              className="inline-flex items-center gap-1.5 text-white/50 hover:text-[#FF5A1F] transition-colors py-1 px-2.5 rounded border border-white/10 hover:border-[#FF5A1F]/40 bg-white/5"
+            >
+              <Lock className="w-3 h-3 text-[#FF5A1F]" />
+              <span>Staff & Admin Portal</span>
+            </Link>
+          </div>
           <p className="tracking-widest uppercase text-white/30">
             Authentic Brand Integration • Verified Magicpin & Facebook Sources
           </p>

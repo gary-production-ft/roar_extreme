@@ -139,7 +139,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
                     ...msg,
                     content:
                       msg.content ||
-                      "I'm momentarily recalibrating. You can contact our head coach directly at 6th Floor Terrace, Rushiraj Regency, Gangapur Road, or submit your Free Pass application below.",
+                      "I'm momentarily recalibrating. You can contact our head coach directly at 601/602 Rushiraj Regency, Vidya Vikas Circle, above Axis Bank, Patil Colony, Canada Corner, Nashik (422005), or submit your Free Pass application below.",
                     isStreaming: false,
                   }
                 : msg
