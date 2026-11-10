@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { env } from './config/environment.js';
+import { lastDbError } from './config/database.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -67,9 +68,11 @@ app.use('/api', globalLimiter);
 // Health check
 app.get('/health', (req, res) => {
   const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  const state = dbStates[mongoose.connection.readyState] || 'unknown';
   res.json({
     status: 'healthy',
-    database: dbStates[mongoose.connection.readyState] || 'unknown',
+    database: state,
+    ...(state !== 'connected' && lastDbError ? { dbError: lastDbError } : {}),
     timestamp: new Date().toISOString(),
     service: 'roar-extreme-api',
   });
