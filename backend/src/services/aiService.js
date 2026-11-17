@@ -8,6 +8,7 @@ import { getPreferences, extractPotentialPreferences } from './memoryService.js'
 import { resolveDirectIntent } from '../ai/intentRouter.js';
 import { faqCache } from './faqCache.js';
 import { MembershipPlan } from '../models/MembershipPlan.js';
+import { metricsCollector } from '../utils/metricsCollector.js';
 
 let geminiClient = null;
 let openaiClient = null;
@@ -185,6 +186,7 @@ export async function generateChatStream({
   });
 
   if (routerMatch.matched) {
+    metricsCollector.recordAiTurn({ provider: 'intent_router' });
     const routerDuration = Math.round(performance.now() - reqStart);
     logger.info(`[CHAT:ROUTER] Intercepted intent [${routerMatch.intent}] in ${routerDuration}ms (Zero LLM round trips).`);
 
@@ -217,6 +219,7 @@ export async function generateChatStream({
   // ──────────────────────────────────────────────────────────
   const cachedAnswer = faqCache.get(userQuery);
   if (cachedAnswer) {
+    metricsCollector.recordAiTurn({ provider: 'faq_cache' });
     const cacheDuration = Math.round(performance.now() - reqStart);
     logger.info(`[CHAT:CACHE] Cache HIT for "${userQuery.slice(0, 30)}" in ${cacheDuration}ms.`);
 
@@ -314,6 +317,10 @@ export async function generateChatStream({
 
         // Record success in circuit breaker
         geminiCircuitBreaker.recordSuccess();
+        metricsCollector.recordAiTurn({
+          provider: 'gemini',
+          completionTokens: Math.max(1, Math.round(geminiResponse.length / 4)),
+        });
 
         // Cache successful response in LRU cache
         faqCache.set(userQuery, geminiResponse);
@@ -379,6 +386,10 @@ export async function generateChatStream({
 
       if (fullResponse.trim()) {
         faqCache.set(userQuery, fullResponse);
+        metricsCollector.recordAiTurn({
+          provider: 'openai',
+          completionTokens: Math.max(1, Math.round(fullResponse.length / 4)),
+        });
         onEvent({
           type: 'message_complete',
           fullResponse,
@@ -407,6 +418,7 @@ export async function generateChatStream({
     fallbackAnswer = `रोअर एक्स्ट्रीम नाशिक मध्ये आपले स्वागत आहे! आमच्याकडे स्ट्रेंथ, कार्डिओ आणि झुम्बासह ८ वर्कआउट प्रकार आहेत. रिसेप्शनला भेट द्या किंवा /register वरून फ्री ट्रायल पास मिळवा.`;
   }
 
+  metricsCollector.recordAiTurn({ provider: 'grounded_knowledge_fallback' });
   await streamWords(fallbackAnswer, onEvent);
 
   onEvent({

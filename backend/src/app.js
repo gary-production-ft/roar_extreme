@@ -11,6 +11,8 @@ import { lastDbError } from './config/database.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { sanitizeInputs } from './middleware/sanitize.js';
+import { requestTelemetry } from './middleware/requestTelemetry.js';
+import metricsRoutes from './routes/metricsRoutes.js';
 
 import leadRoutes from './routes/leadRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -104,6 +106,9 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
+// Request Telemetry, ID Correlation & Latency Profiling
+app.use(requestTelemetry);
+
 // NoSQL Injection, Prototype Pollution & Input Sanitization
 app.use(sanitizeInputs);
 
@@ -157,6 +162,7 @@ app.get(['/health', '/api/health'], (_req, res) => {
 });
 
 // Mount Routes
+app.use(['/metrics', '/api/metrics'], metricsRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
