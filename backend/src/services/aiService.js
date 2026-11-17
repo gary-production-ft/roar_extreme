@@ -14,6 +14,48 @@ let openaiClient = null;
 let warmedActivePlans = null;
 let lastPlanTime = 0;
 
+// Gemini API Resilience Circuit Breaker
+export const geminiCircuitBreaker = {
+  state: 'CLOSED', // CLOSED | OPEN | HALF_OPEN
+  consecutiveFailures: 0,
+  lastFailureTime: 0,
+  cooldownPeriodMs: 30000, // 30-second circuit trip on 429 quota exhaustion
+
+  canAttempt() {
+    if (this.state === 'CLOSED') return true;
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.cooldownPeriodMs) {
+        this.state = 'HALF_OPEN';
+        return true;
+      }
+      return false; // Bypass instantly during outage
+    }
+    return true; // In HALF_OPEN, probe with one trial request
+  },
+
+  recordSuccess() {
+    this.consecutiveFailures = 0;
+    this.state = 'CLOSED';
+  },
+
+  recordFailure(isRateLimit = false) {
+    this.consecutiveFailures++;
+    this.lastFailureTime = Date.now();
+    if (isRateLimit || this.consecutiveFailures >= 3) {
+      this.state = 'OPEN';
+      logger.warn(`[CIRCUIT_BREAKER] Gemini circuit tripped to OPEN (Failures: ${this.consecutiveFailures}, RateLimit: ${isRateLimit}). Bypassing Gemini for 30s.`);
+    }
+  },
+
+  getStatus() {
+    return {
+      state: this.state,
+      consecutiveFailures: this.consecutiveFailures,
+      lastFailureTime: this.lastFailureTime,
+    };
+  },
+};
+
 export async function getActivePlansCached() {
   if (warmedActivePlans && Date.now() - lastPlanTime < 300000) {
     return warmedActivePlans;
@@ -225,12 +267,12 @@ export async function generateChatStream({
   const contents = sanitizeGeminiTurns(recentHistory, userQuery);
 
   // ──────────────────────────────────────────────────────────
-  // 4. PRIMARY PROVIDER: Google Gemini with 3.5s TTFT Timeout
+  // 4. PRIMARY PROVIDER: Google Gemini with Circuit Breaker & 3.5s TTFT Timeout
   // ──────────────────────────────────────────────────────────
   const gemini = getGeminiClient();
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
-  if (gemini) {
+  if (gemini && geminiCircuitBreaker.canAttempt()) {
     let ttft = null;
     let geminiResponse = '';
     const geminiStart = performance.now();
@@ -270,6 +312,9 @@ export async function generateChatStream({
         const totalDuration = Math.round(performance.now() - reqStart);
         logger.info(`[CHAT] [${requestId}] Gemini stream completed. TTFT: ${ttft}ms, Total: ${totalDuration}ms`);
 
+        // Record success in circuit breaker
+        geminiCircuitBreaker.recordSuccess();
+
         // Cache successful response in LRU cache
         faqCache.set(userQuery, geminiResponse);
 
@@ -288,8 +333,16 @@ export async function generateChatStream({
       }
     } catch (err) {
       const elapsed = Math.round(performance.now() - geminiStart);
+      const is429 = Boolean(
+        err.message?.includes('429') ||
+        err.message?.toLowerCase().includes('quota') ||
+        err.message?.includes('RESOURCE_EXHAUSTED')
+      );
+      geminiCircuitBreaker.recordFailure(is429);
       logger.warn(`[CHAT] [${requestId}] Gemini aborted (${err.message}) after ${elapsed}ms. Initiating instant failover.`);
     }
+  } else if (gemini) {
+    logger.warn(`[CHAT] [${requestId}] Gemini Circuit Breaker is ${geminiCircuitBreaker.state}. Fast-failing directly to secondary provider.`);
   }
 
   // ──────────────────────────────────────────────────────────

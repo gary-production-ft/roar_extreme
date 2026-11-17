@@ -237,7 +237,24 @@ export const Kiosk: React.FC = () => {
       }
     } catch (err) {
       console.error('Scan execution error:', err);
-      setState('idle_scanning');
+      setVerificationResult({
+        decision: 'denied',
+        reason: 'network_offline',
+        memberName: 'Network Offline',
+      });
+      setState('denied');
+
+      let count = 4;
+      setCooldownCountdown(count);
+      const timer = setInterval(() => {
+        count -= 1;
+        setCooldownCountdown(count);
+        if (count <= 0) {
+          clearInterval(timer);
+          setVerificationResult(null);
+          setState('idle_scanning');
+        }
+      }, 1000);
     } finally {
       isLoopActiveRef.current = false;
     }
@@ -283,6 +300,8 @@ export const Kiosk: React.FC = () => {
         return 'Facility is closed. Outside operating hours (06:00 - 22:00).';
       case 'rate_limited':
         return 'Device is scanning too rapidly. Please wait.';
+      case 'network_offline':
+        return 'Network connection offline. Please consult studio desk.';
       default:
         return 'Access denied. Please consult studio desk.';
     }

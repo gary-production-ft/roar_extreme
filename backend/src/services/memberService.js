@@ -62,7 +62,8 @@ export async function getMembersList({
       .populate('planId')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Member.countDocuments(query),
   ]);
 

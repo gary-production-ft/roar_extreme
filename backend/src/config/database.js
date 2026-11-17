@@ -12,12 +12,20 @@ export async function connectDatabase() {
   }
 
   try {
+    const maxPoolSize = parseInt(process.env.DB_MAX_POOL_SIZE || '50', 10);
+    const minPoolSize = parseInt(process.env.DB_MIN_POOL_SIZE || '10', 10);
+
     const conn = await mongoose.connect(env.mongoUri, {
-      autoIndex: true,
+      autoIndex: env.nodeEnv !== 'production',
+      maxPoolSize,
+      minPoolSize,
       serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
     lastDbError = null;
-    logger.info(`[DATABASE] MongoDB Connected: ${conn.connection.host} / DB: ${conn.connection.name}`);
+    logger.info(
+      `[DATABASE] MongoDB Connected: ${conn.connection.host} / DB: ${conn.connection.name} (Pool: min=${minPoolSize}, max=${maxPoolSize})`
+    );
     return conn;
   } catch (err) {
     lastDbError = err.message;

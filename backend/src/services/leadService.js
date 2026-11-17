@@ -108,7 +108,7 @@ export async function getLeads({ page = 1, limit = 20, status, search, goal }) {
 
   const skip = (page - 1) * limit;
   const [leads, total] = await Promise.all([
-    Lead.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Lead.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Lead.countDocuments(query),
   ]);
 

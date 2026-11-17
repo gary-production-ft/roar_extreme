@@ -21,7 +21,8 @@ export async function listAccessLogs(req, res, next) {
         .populate('memberId', 'name phone memberId')
         .sort({ timestamp: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       AccessLog.countDocuments(query),
     ]);
 
@@ -42,7 +43,7 @@ export async function listAccessLogs(req, res, next) {
 
 export async function exportAccessLogsCsv(req, res, next) {
   try {
-    const logs = await AccessLog.find().populate('memberId', 'name phone memberId').sort({ timestamp: -1 }).limit(1000);
+    const logs = await AccessLog.find().populate('memberId', 'name phone memberId').sort({ timestamp: -1 }).limit(1000).lean();
 
     const headers = ['Timestamp', 'Decision', 'Reason', 'Member Name', 'Member ID', 'Phone', 'Match Distance', 'Device ID', 'Method'];
     const rows = logs.map((l) => [
@@ -82,7 +83,8 @@ export async function listAttendance(req, res, next) {
         .populate('memberId', 'name phone memberId status')
         .sort({ checkInTime: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Attendance.countDocuments(query),
     ]);
 
@@ -103,7 +105,7 @@ export async function listAttendance(req, res, next) {
 
 export async function exportAttendanceCsv(req, res, next) {
   try {
-    const records = await Attendance.find().populate('memberId', 'name phone memberId').sort({ checkInTime: -1 }).limit(1000);
+    const records = await Attendance.find().populate('memberId', 'name phone memberId').sort({ checkInTime: -1 }).limit(1000).lean();
 
     const headers = ['Check-In Timestamp', 'Member Name', 'Member ID', 'Phone', 'Method'];
     const rows = records.map((a) => [

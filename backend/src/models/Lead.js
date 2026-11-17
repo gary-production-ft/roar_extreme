@@ -74,6 +74,7 @@ const leadSchema = new mongoose.Schema(
 );
 
 leadSchema.index({ createdAt: -1 });
+leadSchema.index({ status: 1, createdAt: -1 });
 
 export const Lead = mongoose.model('Lead', leadSchema);
 
