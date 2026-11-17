@@ -9,6 +9,7 @@
     "server": "node backend/src/server.js",
     "server:dev": "npm --prefix backend run dev",
     "backend:test": "npm --prefix backend test",
+    "test:eval": "npm --prefix backend run test:eval",
     "backend:seed": "npm --prefix backend run seed && npm --prefix backend run create-admin",
     "postinstall": "npm --prefix backend install",
     "install:backend": "npm --prefix backend install",
