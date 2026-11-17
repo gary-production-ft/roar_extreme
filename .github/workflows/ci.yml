@@ -1,0 +1,60 @@
+name: CI Quality Gate
+
+on:
+  push:
+    branches: [main, master, 'audit/*']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  quality-gate:
+    name: Code Quality, Security & Automated Verification
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js LTS (v24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci || npm install
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci || npm --prefix backend install
+
+      - name: Static Code Analysis (Oxlint)
+        run: npm run lint
+
+      - name: TypeScript Verification & Production Build
+        run: npm run build
+
+      - name: Backend Unit & Integration Tests (Vitest)
+        env:
+          NODE_ENV: test
+          PORT: 5001
+          MONGO_URI: mongodb://127.0.0.1:27017/roar_extreme_test
+          JWT_SECRET: test_jwt_secret_key_at_least_32_characters_long_for_ci
+          LOCK_DEVICE_SECRET: test_lock_hmac_secret_key_at_least_32_chars_long
+          FACE_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef
+        run: npm run backend:test
+
+      - name: Clinical Diet & Workout Evaluation Suite (40 Profiles)
+        env:
+          NODE_ENV: test
+        run: npm run test:eval
+
+      - name: Secret Scan Verification
+        run: |
+          echo "Verifying no hardcoded private keys or leaked credentials..."
+          ! grep -rn "BEGIN RSA PRIVATE KEY" backend/ src/ 2>/dev/null

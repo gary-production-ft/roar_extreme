@@ -4,8 +4,8 @@
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF.svg)](https://vitejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-38bdf8.svg)](https://tailwindcss.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express_5-green.svg)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9-47A248.svg)](https://www.mongodb.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express_4.21-green.svg)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_8.9-47A248.svg)](https://www.mongodb.com/)
 [![Google Gemini](https://img.shields.io/badge/AI_Engine-Gemini_3.5_Flash--Lite-orange.svg)](https://ai.google.dev/)
 
 An enterprise-grade, high-performance web platform and AI-powered membership engine engineered for **ROAR EXTREME** — Nashik's premier 6th-floor rooftop fitness arena.
@@ -93,7 +93,7 @@ flowchart TD
         AdminUI["Admin Studio Dashboard"]
     end
 
-    subgraph Gateway ["Express 5 API Gateway (Port 5000)"]
+    subgraph Gateway ["Express 4.21 API Gateway (Port 5000)"]
         RateLimit["Express Rate Limit & Helmet"]
         CORS["Strict CORS & Security Middlewares"]
         AuthMiddleware["JWT Authentication Middleware"]
@@ -313,8 +313,8 @@ flowchart LR
 * **Audio & Speech:** Web Speech API (Synthesis & Recognition)
 
 ### Backend
-* **Runtime:** Node.js (v20+ recommended), Express 5
-* **Database & ODM:** MongoDB, Mongoose 9
+* **Runtime:** Node.js (v24 LTS recommended), Express 4.21
+* **Database & ODM:** MongoDB, Mongoose 8.9
 * **Authentication:** JSON Web Tokens (`jsonwebtoken`), `bcryptjs`
 * **Validation:** Zod Schema Validation
 * **Security & Resilience:** Helmet, Express Rate Limit, CORS, Winston Logger
@@ -663,7 +663,7 @@ Add these under **Environment Variables** in the Render Dashboard:
 
 ```
   ┌─────────────────┐       HTTPS /verify        ┌─────────────────────────┐
-  │  Kiosk Tablet   │ ─────────────────────────> │ Express 5 API (Render)  │
+  │  Kiosk Tablet   │ ─────────────────────────> │ Express 4.21 API (Render)│
   │ (/kiosk camera) │                            │ evaluateAccess (single  │
   └─────────────────┘                            │ source of truth)        │
                                                  └────────────┬────────────┘

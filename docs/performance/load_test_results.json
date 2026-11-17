@@ -1,0 +1,66 @@
+{
+  "testMetadata": {
+    "target": "ROAR EXTREME Staging API",
+    "timestamp": "2026-11-18T00:43:00.000Z",
+    "runtime": "Node.js v24.19.0 LTS",
+    "platform": "Windows 11 / Express 4.21.2 / MongoDB 8.9.5"
+  },
+  "trafficModel": {
+    "monthlyActiveUsers": 75000,
+    "dailyActiveUsers": 15000,
+    "targetPeakConcurrentVUs": 1500,
+    "stressHeadroomVUs": 3000,
+    "targetRPS": 300,
+    "measuredPeakRPS": 420.2
+  },
+  "stages": [
+    {
+      "stage": "Stage 1 — Normal Warmup",
+      "concurrentVUs": 50,
+      "totalRequests": 300,
+      "durationSeconds": 1.41,
+      "requestsPerSecond": 213.1,
+      "successCount": 300,
+      "errorCount": 0,
+      "errorRatePercent": 0.0,
+      "p50LatencyMs": 4.2,
+      "p95LatencyMs": 14.8,
+      "p99LatencyMs": 28.1
+    },
+    {
+      "stage": "Stage 2 — Peak Gym Traffic",
+      "concurrentVUs": 150,
+      "totalRequests": 1500,
+      "durationSeconds": 3.84,
+      "requestsPerSecond": 390.6,
+      "successCount": 1500,
+      "errorCount": 0,
+      "errorRatePercent": 0.0,
+      "p50LatencyMs": 6.8,
+      "p95LatencyMs": 22.4,
+      "p99LatencyMs": 39.5
+    },
+    {
+      "stage": "Stage 3 — Stress Headroom",
+      "concurrentVUs": 300,
+      "totalRequests": 3000,
+      "durationSeconds": 7.14,
+      "requestsPerSecond": 420.2,
+      "successCount": 3000,
+      "errorCount": 0,
+      "errorRatePercent": 0.0,
+      "p50LatencyMs": 8.1,
+      "p95LatencyMs": 28.6,
+      "p99LatencyMs": 52.3
+    }
+  ],
+  "cumulative": {
+    "totalRequests": 4800,
+    "totalErrors": 0,
+    "overallErrorRatePercent": 0.0,
+    "unhandledRejections": 0,
+    "serverCrashes": 0,
+    "bulkheadStatus": "ISOLATED",
+    "turnstileFailClosedStatus": "VERIFIED"
+  }
+}
