@@ -9,8 +9,10 @@
     "dev": "node --watch src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:eval": "node scripts/evaluatePlans.js --fast",
     "seed": "node src/scripts/seedKnowledge.js",
     "seed:plans": "node src/scripts/seedPlans.js",
+    "seed:fitness": "node src/scripts/seedFitnessData.js",
     "create-admin": "node src/scripts/createAdmin.js",
     "rotate-password": "node src/scripts/rotateAdminPassword.js"
   },

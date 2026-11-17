@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, MapPin, Calendar, ArrowRight, Volume2, VolumeX, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Dumbbell, MapPin, Calendar, ArrowRight, Volume2, VolumeX, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react';
 import type { ChatMessageItem } from '../../services/chatService.ts';
 import { ChatService } from '../../services/chatService.ts';
 import { VoiceService } from '../../services/voiceService.ts';
@@ -148,6 +148,31 @@ export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language =
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="mt-2.5 pt-2 border-t border-white/10 space-y-2">
             {message.toolCalls.map((tool, idx) => {
+              if (tool.name === 'open_plan_generator') {
+                return (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl bg-gradient-to-r from-black to-[#1a1410] border border-[#FF5A1F]/40 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center gap-1.5 text-[#FF5A1F] font-bold uppercase tracking-wider text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Custom Plan Generator</span>
+                    </div>
+                    <p className="text-[11px] text-white/80 leading-relaxed">
+                      Build your safe, verified diet & workout plan tailored to Nashik facility equipment and Indian meals.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onActionClick && onActionClick('open_plan_generator')}
+                      className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF5A1F] text-black font-bold uppercase tracking-wider text-[11px] hover:bg-[#FF7545] transition-colors cursor-pointer"
+                    >
+                      <span>Design My Custom Plan</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              }
+
               if (tool.name === 'open_lead_form') {
                 return (
                   <div

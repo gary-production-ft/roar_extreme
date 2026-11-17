@@ -111,6 +111,25 @@ export function resolveDirectIntent({ query, language = 'en', activePlans = [] }
     return { matched: true, intent: 'location', response, lang };
   }
 
+  // 5. Fitness & Diet Plan Request Intent
+  if (
+    /\b(diet\s*plan|workout\s*plan|meal\s*plan|nutrition\s*plan|gym\s*schedule|diet\s*chart|exercise\s*routine|training\s*program|diet\s*batao|workout\s*batao|vyayam\s*plan|kasa\s*diet)\b/i.test(lower)
+  ) {
+    let response = "I can generate a **safe, custom workout and diet plan** calibrated to your exact goal, body metrics, and Indian food habits!\n\nClick **Design My Custom Plan** below to customize your routine in 60 seconds with our deterministic coach engine, or ask me for a specific goal like *'Fat loss diet'* or *'Hypertrophy 4-day split'*.";
+    if (lang === 'hi') {
+      response = "मैं आपके लक्ष्य, वजन, ऊंचाई और खान-पान के अनुसार **सुरक्षित और सटीक वर्कआउट एवं डाइट प्लान** तैयार कर सकता हूँ!\n\nअपनी व्यक्तिगत योजना बनाने के लिए नीचे दिए गए बटन पर क्लिक करें।";
+    } else if (lang === 'mr') {
+      response = "मी तुमच्या ध्येय, वजन आणि आहाराच्या सवयींनुसार **कस्टम वर्कआउट आणि डाएट प्लॅन** तयार करू शकतो!\n\nतुमचा वैयक्तिक प्लॅन सुरू करण्यासाठी खालील पर्यायावर टॅप करा.";
+    }
+    return {
+      matched: true,
+      intent: 'fitness_plan_request',
+      response,
+      action: 'open_plan_generator',
+      lang,
+    };
+  }
+
   // 6. Free Trial Session / Pass
   if (
     /\b(free\s*(pass|trial|session)|trial\s*pass|how\s*(can|do)\s*i\s*(get|book|claim|join)\s*(a\s*)?(free|trial)|demo|register\s*free|bring\s*for\s*(my\s*)?free)\b/i.test(lower)

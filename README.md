@@ -186,6 +186,51 @@ Stage 6 — Deterministic Rule-Based Fallback
 
 **Feedback:** Every AI answer has 👍/👎 buttons. Ratings stored in `ChatFeedback` collection (one per message, upsert). Reviewable in future admin dashboard.
 
+### D. Personalized Workout & Diet Plan Engine (Deterministic + Guarded LLM)
+
+A safe, scientific, and explainable nutrition and training plan engine tailored to ROAR EXTREME's rooftop facility and Indian dietary habits (grounded in **ICMR-NIN IFCT 2017** and **Mifflin-St Jeor 1990**).
+
+```
+User Intake (Chat or Modal)
+  │
+  ▼
+Stage 1 — Medical Safety Gate (Code Only)
+  │   Hard-stops & redirects: Under-18, pregnancy, acute injuries,
+  │   uncontrolled hypertension, heart disease, eating disorder history.
+  │   If flagged → immediate safe redirection to physician/head coach.
+  │   If safe ↓
+Stage 2 — Deterministic Energy & Macro Calculations (Never LLM)
+  │   Mifflin-St Jeor REE (sex-specific equations or neutral midpoint)
+  │   TDEE Multiplier (Sedentary 1.2 to Extremely Active 1.9)
+  │   Goal Caloric Delta (Fat loss: -12% [floor 1200/1500 kcal]; Hypertrophy: +5%)
+  │   Protein: 1.4 – 2.0 g/kg (ISSN / NIN guidelines)
+  │   Fat: 20–35% of total energy | Carbs: Remainder of energy
+  │   Underweight override: BMI < 18.5 forces deficit to 0%
+  │   ↓
+Stage 3 — Knowledge Base Candidate Filtering
+  │   Filters from ExerciseLibrary (38 verified exercises, equipment, difficulty, injuries)
+  │   Filters from FoodDatabase (30+ verified Indian/Maharashtrian IFCT foods, allergens)
+  │   ↓
+Stage 4 — Gemini Structuring & Arrangement (gemini-3.5-flash-lite)
+  │   3.5s timeout race; strictly constrained to candidate IDs & target macros
+  │   ↓
+Stage 5 — Strict Post-Validation
+  │   ±5% calorie check, allergen zero-tolerance, library exercise verification
+  │   If invalid or timeout → instantaneous deterministic template fallback
+  │   ↓
+Stage 6 — Plan Storage & Interaction
+      Saved as `FitnessPlan` with unique ID
+      Interactive tabs (Workout / Meals / Targets)
+      Thumbs up/down feedback (`POST /api/fitness-plans/:id/rating`)
+      "Request Trainer Review" (`POST /api/fitness-plans/:id/trainer-review`)
+```
+
+**Evaluation Suite (40 Profiles):**
+Run `npm run test:eval` (or `node scripts/evaluatePlans.js --fast`) to verify all 40 profiles.
+* **Pass Rate:** **40/40 (100.0%)** across hypertrophy, fat loss, pure strength, combat kickboxing, vegan/celiac/peanut allergies, orthopedic adaptations, and 10 red-flag safety cases.
+
+
+
 ### C. Administrative Management & Analytics Flow
 1. **Authentication:** Studio manager logs into `/admin/login` using administrative credentials.
 2. **JWT Issuance:** Server validates hashed credentials, issuing an HTTP-safe signed Bearer token with 7-day expiration.

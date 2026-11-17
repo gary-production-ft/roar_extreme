@@ -7,6 +7,19 @@ const ALLOWED_PREFERENCE_KEYS = [
   'preferredLanguage',
   'interestedDiscipline',
   'preferredContactChannel',
+  // Fitness plan intake profile keys
+  'ageYears',
+  'heightCm',
+  'weightKg',
+  'sexForEnergyEquation',
+  'activityLevel',
+  'dietPreference',
+  'availableTrainingDays',
+  'foodAllergies',
+  'foodExclusions',
+  'injuriesOrLimitations',
+  'medicalFlags',
+  'fitnessProfile', // Full profile snapshot
 ];
 
 const userPreferenceSchema = new mongoose.Schema(

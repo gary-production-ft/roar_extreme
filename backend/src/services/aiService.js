@@ -149,6 +149,14 @@ export async function generateChatStream({
     // Stream out words smoothly
     await streamWords(routerMatch.response, onEvent);
 
+    if (routerMatch.action) {
+      onEvent({
+        type: 'tool_result',
+        tool: routerMatch.action,
+        result: { action: routerMatch.action, intent: routerMatch.intent },
+      });
+    }
+
     onEvent({
       type: 'message_complete',
       fullResponse: routerMatch.response,

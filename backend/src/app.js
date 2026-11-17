@@ -22,6 +22,7 @@ import memberRoutes from './routes/memberRoutes.js';
 import planRoutes from './routes/planRoutes.js';
 import logsRoutes from './routes/logsRoutes.js';
 import doorRoutes from './routes/doorRoutes.js';
+import fitnessPlanRoutes from './routes/fitnessPlanRoutes.js';
 
 export const app = express();
 
@@ -97,6 +98,7 @@ app.use('/api/preferences', preferenceRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/plans', planRoutes);
+app.use('/api/fitness-plans', fitnessPlanRoutes);
 app.use('/api/admin', logsRoutes);
 app.use('/api/admin', doorRoutes);
 

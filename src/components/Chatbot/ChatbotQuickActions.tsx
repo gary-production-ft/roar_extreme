@@ -6,6 +6,7 @@ interface QuickActionsProps {
 }
 
 const QUICK_PROMPTS = [
+  { label: '🥗 Custom Diet & Workout Plan', prompt: 'I want a custom workout and diet plan for my fitness goal.' },
   { label: '🔥 Claim Free Pass', prompt: 'I want to claim a free single session pass. How does it work?' },
   { label: '📍 Rooftop Location', prompt: 'Where is Roar Extreme located in Nashik and what are the gym hours?' },
   { label: '🏋️ Workout Disciplines', prompt: 'What training programs and fitness disciplines do you offer at Roar Extreme?' },

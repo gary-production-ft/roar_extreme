@@ -16,6 +16,7 @@ import { ChatbotMessage } from './ChatbotMessage.tsx';
 import { ChatbotQuickActions } from './ChatbotQuickActions.tsx';
 import { ChatbotMemoryConsentModal } from './ChatbotMemoryConsentModal.tsx';
 import { VoiceCoachModal } from './VoiceCoachModal.tsx';
+import { FitnessPlanModal } from '../FitnessPlan/FitnessPlanModal.tsx';
 import { ChatService, type ChatMessageItem } from '../../services/chatService.ts';
 import { VoiceService } from '../../services/voiceService.ts';
 
@@ -39,6 +40,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
@@ -240,7 +242,9 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   };
 
   const handleActionClick = (action: string) => {
-    if (action === 'scroll_to_registration') {
+    if (action === 'open_plan_generator') {
+      setIsPlanModalOpen(true);
+    } else if (action === 'scroll_to_registration') {
       onClose();
       const el = document.getElementById('free-session');
       el?.scrollIntoView({ behavior: 'smooth' });
@@ -520,6 +524,12 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
             },
           ]);
         }}
+      />
+      {/* Custom Fitness & Diet Plan Modal */}
+      <FitnessPlanModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        language={language}
       />
     </>
   );
