@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { verifyAccess } from '../services/accessService.js';
+import { logger } from '../utils/logger.js';
 
 export const verifyAccessSchema = z.object({
   body: z.object({
@@ -16,7 +17,7 @@ export const verifyAccessSchema = z.object({
   }),
 });
 
-export async function handleVerifyAccess(req, res, next) {
+export async function handleVerifyAccess(req, res, _next) {
   try {
     const { descriptor, livenessProof, deviceId } = req.validatedData.body;
     const result = await verifyAccess({
@@ -27,6 +28,13 @@ export async function handleVerifyAccess(req, res, next) {
 
     res.json(result);
   } catch (err) {
-    next(err);
+    logger.error(`[ACCESS:FAIL_CLOSED] verifyAccess error: ${err.message}`);
+    // Fail-Closed: Never unlock on server or database error
+    res.status(503).json({
+      decision: 'denied',
+      reason: 'service_unavailable',
+      memberName: null,
+      daysRemaining: 0,
+    });
   }
 }

@@ -272,9 +272,29 @@ export async function renewMembership(memberId, { planId, paymentMethod, amountP
 /**
  * Record an ad-hoc payment for pending balance
  */
-export async function recordMemberPayment(memberId, { amount, method, notes }, adminUser, req = null) {
+export async function recordMemberPayment(memberId, { amount, method, notes, idempotencyKey }, adminUser, req = null) {
   const member = await Member.findById(memberId);
   if (!member) throw new Error('Member not found.');
+
+  // 1. Explicit Idempotency Key check
+  if (idempotencyKey) {
+    const existing = await Payment.findOne({ idempotencyKey });
+    if (existing) {
+      return { member, payment: existing, isDuplicate: true };
+    }
+  }
+
+  // 2. Short-window (15s) deduplication to prevent double-click charges
+  const fifteenSecAgo = new Date(Date.now() - 15000);
+  const recentDuplicate = await Payment.findOne({
+    memberId: member._id,
+    amount,
+    method,
+    createdAt: { $gte: fifteenSecAgo },
+  });
+  if (recentDuplicate) {
+    return { member, payment: recentDuplicate, isDuplicate: true };
+  }
 
   const receiptNo = generateReceiptNo();
   const payment = await Payment.create({
@@ -283,6 +303,7 @@ export async function recordMemberPayment(memberId, { amount, method, notes }, a
     method,
     recordedBy: adminUser._id,
     receiptNo,
+    idempotencyKey: idempotencyKey || undefined,
     periodStart: member.membershipStartDate,
     periodEnd: member.membershipEndDate,
     notes: notes || 'Balance clearance payment',

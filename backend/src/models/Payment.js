@@ -48,6 +48,12 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    idempotencyKey: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

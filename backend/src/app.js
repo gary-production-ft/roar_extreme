@@ -110,8 +110,41 @@ app.use(sanitizeInputs);
 // Global Rate Limiter
 app.use('/api', globalLimiter);
 
-// Health check
-app.get(['/health', '/api/health'], (req, res) => {
+// Liveness Probe (Is the process alive?)
+app.get(['/health/live', '/api/health/live'], (_req, res) => {
+  res.status(200).json({
+    status: 'alive',
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    service: 'roar-extreme-api',
+  });
+});
+
+// Readiness Probe (Are database and dependencies ready to serve traffic?)
+app.get(['/health/ready', '/api/health/ready'], (_req, res) => {
+  const isDbReady = mongoose.connection.readyState === 1;
+  const isConnecting = mongoose.connection.readyState === 2;
+
+  const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  const state = dbStates[mongoose.connection.readyState] || 'unknown';
+
+  const statusCode = isDbReady ? 200 : 503;
+
+  res.status(statusCode).json({
+    status: isDbReady ? 'ready' : isConnecting ? 'degraded' : 'unready',
+    database: {
+      connected: isDbReady,
+      state,
+      ...(lastDbError ? { error: lastDbError } : {}),
+    },
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    service: 'roar-extreme-api',
+  });
+});
+
+// General Health Check (Backward compatibility)
+app.get(['/health', '/api/health'], (_req, res) => {
   const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   const state = dbStates[mongoose.connection.readyState] || 'unknown';
   res.json({

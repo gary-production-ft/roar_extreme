@@ -86,6 +86,13 @@ export const globalLimiter = createLimiter(
   {
     windowMs: 15 * 60 * 1000,
     max: 300,
+    // Bulkhead isolation: bypass global limiter for door access and health monitoring
+    skip: (req) =>
+      req.baseUrl === '/api/access' ||
+      req.originalUrl?.includes('/api/access') ||
+      req.path?.startsWith('/access') ||
+      req.path?.startsWith('/health') ||
+      req.originalUrl?.includes('/health'),
     message: {
       success: false,
       message: 'Too many requests from this IP address. Please try again after 15 minutes.',

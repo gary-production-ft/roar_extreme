@@ -34,12 +34,18 @@ export async function sendConfirmationEmail(lead) {
   const mailer = getTransporter();
   if (mailer) {
     try {
-      await mailer.sendMail({
+      const sendPromise = mailer.sendMail({
         from: `Roar Extreme Nashik <${env.fromEmail}>`,
         to: lead.email,
         subject: 'Your Free Session Pass to Roar Fitness is Confirmed!',
         html,
       });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SMTP_SEND_TIMEOUT (4s)')), 4000)
+      );
+
+      await Promise.race([sendPromise, timeoutPromise]);
       logger.info(`Confirmation email sent to ${lead.email} (${lead.bookingReference})`);
       return { sent: true };
     } catch (err) {

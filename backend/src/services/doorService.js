@@ -197,6 +197,17 @@ export async function manualUnlockDoor(doorId, reason, adminUser, req = null, du
     throw new Error('Cannot manually unlock: Door is in emergency lockdown mode.');
   }
 
+  // Idempotency: Debounce rapid repeated unlock clicks within 2 seconds
+  if (door.status === 'unlocked' && door.lastCommandAt && Date.now() - door.lastCommandAt.getTime() < 2000) {
+    logger.info(`[DOOR:DEBOUNCE] Manual unlock for ${doorId} deduplicated (already unlocking).`);
+    return {
+      success: true,
+      door,
+      isDuplicate: true,
+      message: 'Door unlock is already in progress.',
+    };
+  }
+
   const lockDeviceId = door.lockDeviceId;
   const secret = devicePlainSecrets.get(lockDeviceId) || process.env.LOCK_DEVICE_SECRET || 'roar_esp32_lock_hmac_secret_key_2026!';
 
