@@ -1,8 +1,17 @@
 import { Lead } from '../models/Lead.js';
 import { ChatSession } from '../models/ChatSession.js';
 import { UserPreference } from '../models/UserPreference.js';
+import { Member } from '../models/Member.js';
+import { Attendance } from '../models/Attendance.js';
 
 export async function getDashboardMetrics() {
+  const now = new Date();
+  const next7Days = new Date();
+  next7Days.setDate(next7Days.getDate() + 7);
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   const [
     totalLeads,
     newLeads,
@@ -12,15 +21,28 @@ export async function getDashboardMetrics() {
     cancelledLeads,
     totalChatSessions,
     totalPreferencesSaved,
+    totalMembers,
+    activeMembers,
+    expiringSoonMembers,
+    paymentPendingMembers,
+    todayAttendance,
   ] = await Promise.all([
     Lead.countDocuments(),
-    Lead.countDocuments({ status: 'New' }),
-    Lead.countDocuments({ status: 'Contacted' }),
-    Lead.countDocuments({ status: 'Scheduled' }),
-    Lead.countDocuments({ status: 'Completed' }),
-    Lead.countDocuments({ status: 'Cancelled' }),
+    Lead.countDocuments({ status: { $in: ['New', 'pending'] } }),
+    Lead.countDocuments({ status: { $in: ['Contacted', 'contacted'] } }),
+    Lead.countDocuments({ status: { $in: ['Scheduled', 'trial_scheduled'] } }),
+    Lead.countDocuments({ status: { $in: ['Completed', 'completed', 'attended', 'converted'] } }),
+    Lead.countDocuments({ status: { $in: ['Cancelled', 'cancelled', 'archived'] } }),
     ChatSession.countDocuments(),
     UserPreference.countDocuments(),
+    Member.countDocuments(),
+    Member.countDocuments({ status: 'active' }),
+    Member.countDocuments({
+      status: { $ne: 'expired' },
+      membershipEndDate: { $gte: now, $lte: next7Days },
+    }),
+    Member.countDocuments({ paymentStatus: { $ne: 'paid' } }),
+    Attendance.countDocuments({ checkInTime: { $gte: startOfToday } }),
   ]);
 
   // Aggregation: Leads by Date (last 14 days)
@@ -79,6 +101,11 @@ export async function getDashboardMetrics() {
       conversionRate: totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0,
       totalChatSessions,
       totalPreferencesSaved,
+      totalMembers,
+      activeMembers,
+      expiringSoonMembers,
+      paymentPendingMembers,
+      todayAttendance,
     },
     charts: {
       leadsOverTime: leadsOverTime.map((d) => ({ date: d._id, leads: d.count })),
@@ -88,4 +115,3 @@ export async function getDashboardMetrics() {
     recentLeads,
   };
 }
-

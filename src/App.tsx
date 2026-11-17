@@ -14,6 +14,10 @@ const AdminLogin = lazy(() => import('./pages/Admin/AdminLogin').then((m) => ({ 
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 const AdminLeads = lazy(() => import('./pages/Admin/AdminLeads').then((m) => ({ default: m.AdminLeads })));
 const AdminKnowledge = lazy(() => import('./pages/Admin/AdminKnowledge').then((m) => ({ default: m.AdminKnowledge })));
+const AdminMembers = lazy(() => import('./pages/Admin/AdminMembers').then((m) => ({ default: m.AdminMembers })));
+const AdminAccessLogs = lazy(() => import('./pages/Admin/AdminAccessLogs').then((m) => ({ default: m.AdminAccessLogs })));
+const AdminDoors = lazy(() => import('./pages/Admin/AdminDoors').then((m) => ({ default: m.AdminDoors })));
+const Kiosk = lazy(() => import('./pages/Kiosk/Kiosk').then((m) => ({ default: m.Kiosk })));
 
 const PageLoader = () => (
   <div className="min-h-[60vh] bg-[#080808] flex items-center justify-center">
@@ -81,10 +85,16 @@ export function App() {
               }
             />
 
+            {/* Face Recognition Attendance Kiosk (Fullscreen) */}
+            <Route path="/kiosk" element={<Kiosk />} />
+
             {/* Admin Authentication & Management Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="members" element={<AdminMembers />} />
+              <Route path="access-logs" element={<AdminAccessLogs />} />
+              <Route path="doors" element={<AdminDoors />} />
               <Route path="leads" element={<AdminLeads />} />
               <Route path="knowledge" element={<AdminKnowledge />} />
             </Route>

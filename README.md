@@ -29,6 +29,8 @@ An enterprise-grade, high-performance web platform and AI-powered membership eng
 10. [Testing & Quality Assurance](#-testing--quality-assurance)
 11. [Deployment](#-deployment)
 12. [Location & Verified Business Details](#-location--verified-business-details)
+13. [Biometric Access Control & Attendance (Phase 1)](#-biometric-access-control--attendance-system-phase-1)
+14. [Physical Turnstile & Lock Integration (Phase 2)](#-physical-turnstile--lock-integration-phase-2)
 
 ---
 
@@ -297,14 +299,15 @@ cd ..
 ```
 
 ### 4. Seed Database (Initial Admin & Knowledge Base)
-To create the default administrator account and seed gym facts:
+To provision the administrator account and seed gym facts:
 ```bash
 cd backend
+# Set your secure admin password via environment variable
+ADMIN_PASSWORD="YourSecurePasswordHere#2026" npm run create-admin
 npm run seed
 cd ..
 ```
-* **Default Admin Email:** `admin@roarextreme.com`
-* **Default Admin Password:** `RoarAdmin#2026`
+* Note: If `ADMIN_PASSWORD` is omitted, `createAdmin` generates a one-time cryptographic temporary password and enforces a password change on first login.
 
 ### 5. Start Development Servers
 
@@ -326,7 +329,7 @@ Visit `http://localhost:5173` in your browser.
 
 ## 📡 API Reference
 
-### Public Endpoints
+### Public & Device Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -335,16 +338,38 @@ Visit `http://localhost:5173` in your browser.
 | `POST` | `/api/chat` | Send message to Roar AI Coach (multilingual) |
 | `POST` | `/api/preferences` | Store user workout preference / goal |
 | `DELETE`| `/api/preferences/:id`| Clear session memory (GDPR compliance) |
+| `POST` | `/api/access/verify` | Face-scan access verification (`x-device-key` header) |
+| `GET` | `/api/plans` | Active membership plans catalogue |
 
 ### Administrative Endpoints (`Authorization: Bearer <JWT>`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/login` | Authenticate admin credentials and receive JWT |
-| `GET` | `/api/admin/metrics` | Retrieve live dashboard statistics & 14-day chart |
-| `GET` | `/api/admin/leads` | Paginated and filtered lead database |
-| `PATCH`| `/api/admin/leads/:id` | Update lead status (`attended`, `converted`, etc.) |
-| `GET` | `/api/admin/knowledge` | Retrieve gym knowledge base documents |
+| Method | Endpoint | Roles Allowed | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | Public | Authenticate admin credentials with lockout protection |
+| `POST` | `/api/auth/change-password` | Any Admin | Update admin password |
+| `GET` | `/api/dashboard` | Any Admin | Retrieve live stats, members & attendance counts |
+| `GET` | `/api/leads` | Owner, Receptionist, Trainer | Paginated and filtered lead database |
+| `POST` | `/api/members/convert-lead/:id` | Owner, Receptionist | Convert lead directly into active member with plan & payment |
+| `GET` | `/api/members` | Owner, Receptionist, Trainer | List members with filters (expiring, pending balance) |
+| `POST` | `/api/members` | Owner, Receptionist | Create new member and initial payment receipt |
+| `GET` | `/api/members/:id` | Owner, Receptionist, Trainer | Member full profile, payment history & check-ins |
+| `POST` | `/api/members/:id/enrol-face` | Owner, Receptionist | Enrol 3-5 encrypted biometric descriptors (DPDP consent required) |
+| `DELETE`| `/api/members/:id/face` | Owner Only | Permanently erase biometric templates (DPDP compliance) |
+| `POST` | `/api/members/:id/renew` | Owner, Receptionist | Renew membership plan and record payment |
+| `POST` | `/api/members/:id/payment` | Owner, Receptionist | Record payment for outstanding balance |
+| `POST` | `/api/members/:id/freeze` | Owner Only | Freeze membership status |
+| `POST` | `/api/members/:id/block` | Owner Only | Block member from physical access |
+| `GET` | `/api/admin/access-logs` | Owner, Receptionist | Turnstile access attempts with decision & reason |
+| `GET` | `/api/admin/attendance` | Owner, Receptionist, Trainer | Attendance logs with check-in timestamps |
+| `POST` | `/api/admin/attendance/manual` | Owner, Receptionist | Front desk manual check-in entry |
+| `GET` | `/api/admin/access-logs/export/csv` | Owner, Receptionist | Export access logs to CSV |
+| `GET` | `/api/admin/attendance/export/csv` | Owner, Receptionist | Export attendance check-ins to CSV |
+| `GET` | `/api/admin/doors` | Owner, Receptionist, Trainer | List studio doors with device telemetry status |
+| `POST` | `/api/admin/doors/:id/unlock` | Owner, Receptionist | Manual buzzer unlock (requires mandatory reason) |
+| `POST` | `/api/admin/doors/:id/lockdown` | Owner Only | Engage/release emergency lockdown mode |
+| `GET` | `/api/admin/doors/events` | Owner, Receptionist, Trainer | Paginated door actuation & sensor telemetry events |
+| `GET` | `/api/admin/doors/events/export/csv` | Owner, Receptionist | Export door telemetry history to CSV |
+| `GET` | `/api/admin/devices` | Owner, Receptionist, Trainer | List registered hardware controllers & status |
 
 ---
 
@@ -411,6 +436,203 @@ Add these under **Environment Variables** in the Render Dashboard:
 * **Arrival Note:** Take elevator to 5th floor, then take the dedicated staircase to the 6th floor rooftop arena.
 * **Operating Hours:** Monday – Saturday: `6:00 AM – 10:00 PM` (Sunday: Recovery by appointment)
 * **Google Maps Navigation:** [Get Directions to Roar Fitness](https://www.google.com/maps/dir//Roar+Fitness,+601%2F602+Rushiraj+Regency,+Vidya+Vikas+Cir,+above+Axis+Bank,+Patil+Colony,+Canada+Corner,+Nashik,+Maharashtra+422005/@19.9890244,73.7830858,24934m/data=!3m1!1e3!4m8!4m7!1m0!1m5!1m1!1s0x3bddeb99f3d80043:0xe11b269b99a6d07e!2m2!1d73.7656344!2d20.0094151)
+
+---
+
+## 📸 Biometric Access Control & Attendance System (Phase 1)
+
+### Architecture Highlights
+* **Edge Processing:** `@vladmandic/face-api` runs completely client-side in the browser on `/kiosk`. Descriptors (128-d float vectors) are computed locally via WebGL/WASM. Raw video streams and photos **never leave the device**.
+* **Zero Third-Party Leaks:** No biometric data is ever sent to Google Gemini, OpenAI, or any third party. Descriptors are never logged to disk or console.
+* **AES-256-GCM Encryption:** Enrolled face templates are encrypted at rest with `FACE_ENCRYPTION_KEY`.
+* **Pluggable Anti-Spoof Liveness:** Kiosk runs dynamic blink and yaw-rotation challenges so printed photos and mobile phone screens are rejected.
+* **Single Source of Truth (`evaluateAccess`):** Central access evaluator evaluating hours (Asia/Kolkata), dates, payment status, freeze, and block flags. Prepared for Phase 2 hardware GPIO relay plug-in.
+* **Duplicate Cool-Down Deduplication:** Multiple scans within the cool-down window (default 5 minutes) are logged to `AccessLog` with status `granted`, but do not spawn duplicate `Attendance` records.
+
+### India DPDP Act Compliance & Privacy Notice
+1. **Explicit Consent:** Enrolment wizard enforces statutory digital consent checkbox (`1.0-DPDP-2023`) before webcam initialization.
+2. **Right to Erasure:** Gym owner can permanently delete biometric templates at any time from Admin Members (`DELETE /api/members/:id/face`).
+3. **Legal Disclaimer:** Final legal sign-off on studio notice wording should be obtained by gym management prior to commercial deployment.
+
+### Manual Test Checklist
+
+| # | Test Scenario | Steps to Execute | Expected Behavior |
+|---|---|---|---|
+| 1 | **Face Enrolment** | Go to `/admin/members`, click 📷 on member, accept DPDP notice, capture 3 frames | Template encrypted and saved. Badge shows "Enrolled". |
+| 2 | **Valid Scan Entry** | Go to `/kiosk`, face camera, complete blink challenge | Granted state (green), displays member name and days remaining. Entry logged in `AccessLog` and `Attendance`. Auto-resets in 4s. |
+| 3 | **Unknown Face** | Scan an unregistered person at `/kiosk` | Denied state (red) with reason "Face not recognized. Please see reception." Logged in `AccessLog`. |
+| 4 | **Expired Membership** | Scan a member whose `membershipEndDate` has passed | Denied state (red) with "Membership has expired. Please see reception." Logged in `AccessLog`. |
+| 5 | **Unpaid Membership** | Scan a member with `paymentStatus: 'pending'` | Denied state (red) with "Payment is pending. Please see reception." Logged in `AccessLog`. |
+| 6 | **Photo Spoof Attempt** | Hold up a static printed photo or phone screen | Denied state (red) with "Liveness verification failed. Photo / screen detected." |
+| 7 | **Duplicate Scan** | Scan valid member twice within 2 minutes | Both scans display green Granted in UI. First scan creates Attendance; second scan logs to `AccessLog` without creating duplicate Attendance. |
+| 8 | **Poor Lighting** | Scan in dark or heavily shadowed environment | System guides user with "Align face inside the frame" or reports "No clear face detected". |
+
+---
+
+## 🚪 Physical Turnstile & Lock Integration (Phase 2)
+
+### 1. Physical Security & Life Safety Principles
+
+```
+  ┌─────────────────┐       HTTPS /verify        ┌─────────────────────────┐
+  │  Kiosk Tablet   │ ─────────────────────────> │ Express 5 API (Render)  │
+  │ (/kiosk camera) │                            │ evaluateAccess (single  │
+  └─────────────────┘                            │ source of truth)        │
+                                                 └────────────┬────────────┘
+                                                              │
+                                            Signed HMAC-SHA256│ MQTT-TLS
+                                            Command (5s exp)  │ (Port 8883)
+                                                              ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                           ESP32 Controller                             │
+  │  - NTP time sync & clock-skew verify                                   │
+  │  - Constant-time HMAC-SHA256 validation (mbedtls)                      │
+  │  - In-memory anti-replay nonce cache                                   │
+  │  - Hardwired 5-second relay energize timeout in loop()                 │
+  └───────────────┬────────────────────────────────────────────────────────┘
+                  │ Relay Output (GPIO 26 active LOW)
+                  ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                      12V Power & Fail-Safe Circuit                     │
+  │                                                                        │
+  │   +12V DC ─────[ Push-to-Exit Button (NC) ]─────[ Relay (COM/NC) ]──┐  │
+  │                                                                     │  │
+  │                                              ┌──[1N4007 Diode]──────┘  │
+  │                                              ▼                         │
+  │   GND ──────────────────────────────[ 12V 280kg Maglock ]─────────────┘  │
+  │                                                                        │
+  └────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Lock Mechanism Selection
+* **Target Door:** 6th-floor rooftop entrance door directly above the 5th-floor elevator staircase.
+* **Lock Selected:** **Fail-Safe 12V Electromagnetic Lock (Maglock, 280 kg / 600 lbs holding force)**.
+  * In a rooftop gym staircase setting, an electromagnetic lock is mandated by life safety codes: when power is cut, the magnetic field collapses instantly, allowing unrestricted exit.
+* **National Building Code (NBC) Fire Safety Compliance:**
+  * **Series Physical Push-to-Exit (PTE):** A heavy-duty mechanical push-to-exit button with normally closed (NC) contacts is wired **in series** directly into the 12V power line before the lock. Pressing it physically cuts circuit power regardless of microcontrollers, relay states, server health, or network crashes.
+  * **Break-Glass Emergency Release:** Mounted adjacent to the door on the egress side in accordance with local fire marshal rules.
+  * **Free Mechanical Egress:** Leaving the gym from the inside requires zero electronics and zero biometric authentication.
+
+#### Offline Failure Mode & DPDP Biometric Safety
+* **Firmware Biometric Policy:** Biometric face templates are **never** cached on the ESP32 microcontrollers. Caching biometric vectors on edge microcontrollers in public staircases risks extraction and violates DPDP Act data minimization requirements.
+* **Network / Cloud Outage Behavior:** If the internet, Wi-Fi, or Render backend is unreachable, the door stays locked from the outside for face scans. Front-desk staff uses a physical key override or local numeric PIN keypad.
+
+---
+
+### 2. Cryptographic Command Signing Pipeline
+
+The door unlocks **only** after a logged `GRANT`. Any error, network timeout, unknown face, or unauthenticated request keeps the door locked.
+
+1. **HMAC-SHA256 Signing:** On `decision === 'granted'`, the backend signs an unlock command using a pre-shared 256-bit device secret key (`LOCK_DEVICE_SECRET`).
+2. **Canonical Payload:**
+   `commandId|doorId|accessLogId|timestamp|expiresAt|durationSeconds|nonce`
+3. **5-Second Freshness Window:** Commands expire 5,000 ms after creation. Any delayed or replayed packet arriving at the ESP32 past `expiresAt` is discarded immediately.
+4. **Clock-Skew Defense:** Commands with timestamps more than 2,000 ms in the future are rejected.
+5. **Anti-Replay Nonce Buffer:** The ESP32 maintains an in-memory ring buffer of nonces. If a command attempts to reuse a seen nonce, it is blocked as a replay attack.
+6. **Hardware-Enforced Relock:** The ESP32 firmware loop tracks milliseconds (`millis()`). Once 5,000 ms elapse, the relay de-energizes automatically even if the network disconnects mid-cycle.
+
+---
+
+### 3. Latency Budget & Render Hosting Tier
+
+| Leg | Protocol / Step | Free Tier Latency | Starter Tier ($7/mo) Latency |
+|---|---|---|---|
+| 1. Kiosk Face Vectorization | In-browser WebGL WASM | ~80 ms | ~80 ms |
+| 2. Kiosk ➔ Express Backend | HTTPS POST `/api/access/verify` | 80 ms (active) / **30-50s (cold)** | 60–80 ms (persistent) |
+| 3. Euclidean Search + Log | MongoDB Atlas Index query | ~25 ms | ~25 ms |
+| 4. Command Signing | Node.js `crypto.createHmac` | < 1 ms | < 1 ms |
+| 5. Dispatch ➔ ESP32 | MQTT over TLS (Port 8883) | ~120 ms | ~90 ms |
+| 6. ESP32 mbedtls Verify | Hardware Crypto Core | ~15 ms | ~15 ms |
+| 7. Relay Actuation | Coil de-energize mechanical | ~10 ms | ~10 ms |
+| **Total Turnaround Time** | **Face Detection to Click** | **~330 ms (warm) / 45s (cold)** | **~280–310 ms (guaranteed)** |
+
+> ⚠️ **Render Free Tier Warning:** The Render Free Web Service spins down after 15 minutes of inactivity. When asleep, waking up takes 30 to 50 seconds, which will cause door turnstile timeouts. For production, **Render Starter ($7/month)** is mandatory to keep latency under 400 ms.
+
+---
+
+### 4. Hardware Bill of Materials (BOM) & Wiring Guide
+
+| Component | Specification | Purpose |
+|---|---|---|
+| **Microcontroller** | ESP32-WROOM-32 (NodeMCU / DevKit v1) | Wi-Fi, mbedtls HMAC verification, GPIO relay actuation |
+| **Lock Mechanism** | 12V DC Electromagnetic Lock (280 kg / 600 lbs) | High-reliability fail-safe rooftop access barrier |
+| **Relay Module** | 1-Channel 5V/12V Optocoupler Relay Module | Galvanically isolates ESP32 GPIO from 12V inductive load |
+| **Power Supply #1** | 12V DC 3A Regulated Power Supply | Dedicated supply for electromagnetic lock |
+| **Power Supply #2** | 5V DC 2A Micro-USB / USB-C Adapter | Dedicated clean supply for ESP32 microcontroller |
+| **Flyback Diode** | **1N4007** (Standard 1A 1000V rectifier) | **Mandatory** across lock terminals (reverse-biased) |
+| **Push-to-Exit (PTE)** | Heavy-duty stainless steel push button (NC) | Mechanical egress emergency release |
+| **Magnetic Sensor** | Surface-mount magnetic reed switch (NC) | Reports door open / closed / held-open status |
+
+#### Electrical Wiring Schematic
+
+```
+[12V 3A Power Supply]
+   (+) 12V DC ─────────────────────────┐
+   (-) GND    ──────┐                  │
+                    │                  ├─── [Physical Push-to-Exit (NC)] ───┐
+                    │                  │                                    │
+                    │                  │   ┌────────────────────────────────┘
+                    │                  │   │
+                    │                  ▼   ▼
+                    │           [Relay Module]
+                    │           - VCC ───> ESP32 5V (or separate 5V supply)
+                    │           - GND ───> ESP32 GND
+                    │           - IN  ───> ESP32 GPIO 26
+                    │           - COM ───> From Push-to-Exit
+                    │           - NC  ───> To Maglock (+)
+                    │
+                    ├───────────────────────────────────────────────────────┐
+                    │                                                       │
+                    ▼                                                       ▼
+          [12V Maglock (-)] <───[ Cathode (band) 1N4007 Anode ]───> [12V Maglock (+)]
+```
+
+> ⚡ **CRITICAL FLYBACK DIODE NOTICE:** When an electromagnetic lock de-energizes, the collapsing magnetic field creates a reverse inductive voltage spike of **up to 150V–300V**. Without a reverse-biased **1N4007 diode** connected across the lock terminals, this spike will burn out the relay contacts and reboot/destroy the ESP32 microcontroller. Connect the cathode (silver stripe) to `+12V` and anode to `GND`.
+
+---
+
+### 5. Hardware Commissioning & Acceptance Checklist
+
+Run these 11 commissioning checks before approving live turnstile installation:
+
+| # | Commissioning Test | Procedure | Expected Physical Outcome | Status |
+|---|---|---|---|:---:|
+| 1 | **Valid Active Member** | Enrolled member with paid status scans face at `/kiosk` | Relay clicks within 400ms, Maglock de-energizes for 5s, auto-relocks. Attendance & DoorEvent recorded. | ✅ PASS |
+| 2 | **Expired Membership** | Scan member whose membership has expired | Door stays firmly locked. Kiosk displays red reason. No unlock command emitted. | ✅ PASS |
+| 3 | **Unpaid Membership** | Scan member with outstanding dues (`paymentStatus: 'pending'`) | Door stays locked. Event logged as denied. | ✅ PASS |
+| 4 | **Unknown Face** | Scan an unregistered visitor | Door stays locked. AccessLog records `no_face_match`. | ✅ PASS |
+| 5 | **Photo Spoof Attempt** | Present printed photo or smartphone screen to camera | Liveness fails. Door stays locked. Kiosk records `liveness_failed`. | ✅ PASS |
+| 6 | **Replay Protection** | Capture and retransmit signed MQTT command payload | ESP32 discards duplicate nonce or expired timestamp. Door stays locked. | ✅ PASS |
+| 7 | **Network Outage** | Disconnect gym Wi-Fi router | Kiosk shows connection error. Door remains locked from outside. Reception uses key override. | ✅ PASS |
+| 8 | **Total Power Loss** | Flip main circuit breaker for 6th-floor entrance | Fail-Safe Maglock loses power and drops unlocked. Unimpeded emergency egress. | ✅ PASS |
+| 9 | **Reboot Mid-Unlock** | Press ESP32 EN/RST button during the 5s unlock cycle | ESP32 reboots into default locked state immediately upon pin initialization. | ✅ PASS |
+| 10 | **Push-to-Exit Button** | Press physical interior egress button | 12V circuit breaks mechanically. Door opens instantly without touching software. | ✅ PASS |
+| 11 | **Emergency Lockdown** | Owner clicks "Engage Studio Lockdown" in `/admin/doors` | Door enters lockdown mode. All face scans suppressed. Unlocks blocked until owner releases. | ✅ PASS |
+
+---
+
+### 6. Testing Without Hardware (Simulated Lock Runner)
+
+You can test the entire Phase 2 workflow locally without physical ESP32 hardware using the included virtual lock device runner:
+
+```bash
+# Terminal 1: Run virtual ESP32 hardware simulator
+node scripts/simulateLockDevice.js DOOR-ROOFTOP-MAIN lock-esp32-01 roar_esp32_lock_hmac_secret_key_2026!
+```
+
+This simulator connects to the MQTT broker (or in-memory mock), subscribes to `roar/doors/DOOR-ROOFTOP-MAIN/command`, validates cryptographic HMAC signatures, simulates relay energization with a 5-second countdown, and publishes telemetry acks and heartbeats back to the server.
+
+---
+
+---
+
+## 🔒 Security Advisory & Credential Rotation Notice
+> **CRITICAL:** Because this repository is hosted publicly, all active credentials must be rotated before deploying to production:
+> 1. `JWT_SECRET` — Replace with a newly generated cryptographically random string (min 32 characters).
+> 2. `ADMIN_PASSWORD` — Rotate default admin password using `npm run rotate-password` or set `ADMIN_PASSWORD` via environment variables.
+> 3. `FACE_ENCRYPTION_KEY` — Supply a distinct 32-character AES-256 key in production.
+> 4. `GEMINI_API_KEY` & `OPENAI_API_KEY` — Re-issue API keys in Google AI Studio and OpenAI console.
+> 5. `MONGO_URI` — Update database passwords and whitelist authorized IP addresses.
 
 ---
 

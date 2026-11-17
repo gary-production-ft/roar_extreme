@@ -1,0 +1,36 @@
+#pragma once
+
+// ==============================================================================
+// ROAR EXTREME — ESP32 DOOR CONTROLLER CONFIGURATION
+// Rename this file to "config.h" and insert your real credentials.
+// NEVER commit your real config.h to public git repositories!
+// ==============================================================================
+
+// 1. Wi-Fi Access Credentials
+#define WIFI_SSID             "ROAR_STUDIO_WIFI"
+#define WIFI_PASSWORD         "nashik_rooftop_pass_2026"
+
+// 2. Managed MQTT Broker (TLS Port 8883)
+// e.g. HiveMQ Cloud: "your-cluster-id.s1.eu.hivemq.cloud"
+#define MQTT_BROKER_HOST      "your-hivemq-cluster-url.s1.eu.hivemq.cloud"
+#define MQTT_BROKER_PORT      8883
+#define MQTT_USERNAME         "roar_lock_device_01"
+#define MQTT_PASSWORD         "your_secure_broker_password"
+
+// 3. Hardware Identity & Cryptographic Shared Secret
+#define DEVICE_ID             "lock-esp32-01"
+#define DOOR_ID               "DOOR-ROOFTOP-MAIN"
+
+// Must match LOCK_DEVICE_SECRET on the Render backend
+#define HMAC_SHARED_SECRET    "roar_esp32_lock_hmac_secret_key_2026!"
+
+// 4. GPIO Pin Mapping
+#define PIN_RELAY             23   // Drives 5V optocoupled relay
+#define PIN_DOOR_SENSOR       4    // Magnetic reed switch (INPUT_PULLUP)
+#define PIN_EXIT_BUTTON       5    // Physical momentary push-to-exit (INPUT_PULLUP)
+#define PIN_STATUS_LED        2    // Onboard blue status LED
+
+// 5. Hardware Timing Constraints
+#define UNLOCK_PULSE_MS       5000 // Firmware-enforced maximum unlock duration
+#define HEARTBEAT_INTERVAL_MS 20000
+#define MAX_TIMESTAMP_DRIFT_MS 5000 // 5-second freshness window

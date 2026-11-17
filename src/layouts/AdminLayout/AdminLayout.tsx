@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, BookOpen, LogOut, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, LogOut, ArrowLeft, UserCheck, ShieldCheck, Camera, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const AdminLayout: React.FC = () => {
@@ -35,6 +35,9 @@ export const AdminLayout: React.FC = () => {
 
   const navItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Analytics Overview', end: true },
+    { to: '/admin/members', icon: UserCheck, label: 'Members & Biometrics' },
+    { to: '/admin/access-logs', icon: ShieldCheck, label: 'Access & Attendance' },
+    { to: '/admin/doors', icon: Lock, label: 'Door & Turnstiles' },
     { to: '/admin/leads', icon: Users, label: 'Lead Management' },
     { to: '/admin/knowledge', icon: BookOpen, label: 'Knowledge Base' },
   ];
@@ -90,6 +93,16 @@ export const AdminLayout: React.FC = () => {
 
         {/* Footer Actions */}
         <div className="p-4 border-t border-white/10 space-y-2">
+          <a
+            href="/kiosk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-black bg-[#FF5A1F] hover:bg-[#FF7545] shadow-lg shadow-[#FF5A1F]/20 transition-all cursor-pointer uppercase tracking-wider"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Launch /kiosk Scanner</span>
+          </a>
+
           <a
             href="/"
             target="_blank"

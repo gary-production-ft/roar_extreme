@@ -43,7 +43,7 @@ const leadSchema = new mongoose.Schema(
       type: String,
       enum: [
         'New', 'Contacted', 'Scheduled', 'Completed', 'Cancelled',
-        'pending', 'contacted', 'attended', 'cancelled', 'completed'
+        'pending', 'contacted', 'trial_scheduled', 'attended', 'converted', 'archived', 'cancelled', 'completed'
       ],
       default: 'New',
       index: true,

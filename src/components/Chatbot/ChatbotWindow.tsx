@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Send,
+  Square,
   Sparkles,
   Sliders,
   RotateCcw,
@@ -35,6 +36,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   const [inputText, setInputText] = useState('');
   const [language, setLanguage] = useState<'en' | 'hi' | 'mr'>('en');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -44,6 +46,8 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const ttsBufferRef = useRef('');
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -70,6 +74,12 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
       scrollToBottom('smooth');
     }
   }, [messages, showScrollBottom]);
+
+  // Seed sessionId from local storage on mount
+  useEffect(() => {
+    const cached = ChatService.getCurrentSessionId();
+    if (cached) setSessionId(cached);
+  }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
@@ -99,10 +109,16 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
     setIsStreaming(true);
     setShowScrollBottom(false);
 
+    // Create a fresh AbortController so the Stop button can cancel the stream
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    ttsBufferRef.current = '';
+
     try {
       await ChatService.streamMessage({
         message: text,
         language,
+        signal: abortController.signal,
         onDelta: (delta) => {
           setMessages((prev) =>
             prev.map((msg) =>
@@ -111,6 +127,18 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
                 : msg
             )
           );
+
+          // Sentence-by-sentence TTS: speak each complete sentence as it arrives
+          ttsBufferRef.current += delta;
+          const sentenceEnd = /[.!?।]\s/;
+          const match = sentenceEnd.exec(ttsBufferRef.current);
+          if (match) {
+            const sentence = ttsBufferRef.current.slice(0, match.index + 1).trim();
+            ttsBufferRef.current = ttsBufferRef.current.slice(match.index + match[0].length);
+            if (sentence) {
+              VoiceService.speak({ text: sentence, language });
+            }
+          }
         },
         onToolCall: (tool) => {
           setMessages((prev) =>
@@ -133,8 +161,26 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
           );
           setIsStreaming(false);
           setLastFailedText(null);
+          abortControllerRef.current = null;
+          ttsBufferRef.current = '';
+          // Capture the session ID after first successful exchange
+          setSessionId(ChatService.getCurrentSessionId());
         },
         onError: (err) => {
+          // AbortError means user clicked Stop — not a real failure
+          if (err.name === 'AbortError') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMsgId
+                  ? { ...msg, isStreaming: false }
+                  : msg
+              )
+            );
+            setIsStreaming(false);
+            abortControllerRef.current = null;
+            ttsBufferRef.current = '';
+            return;
+          }
           setLastFailedText(text);
           setMessages((prev) =>
             prev.map((msg) =>
@@ -157,6 +203,11 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
       setLastFailedText(text);
       setIsStreaming(false);
     }
+  };
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+    VoiceService.stopSpeaking();
   };
 
   const handleRetry = () => {
@@ -335,6 +386,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
                 message={m}
                 language={language}
                 onActionClick={handleActionClick}
+                sessionId={sessionId ?? undefined}
               />
             ))}
             {lastFailedText && !isStreaming && (
@@ -424,14 +476,25 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isStreaming}
-            className="w-10 h-10 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] disabled:opacity-40 disabled:hover:bg-[#FF5A1F] text-black flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed shadow-md"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          {/* Send / Stop Button */}
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={handleStop}
+              title="Stop generating"
+              className="w-10 h-10 rounded-xl bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer shadow-md"
+            >
+              <Square className="w-4 h-4 fill-white" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!inputText.trim()}
+              className="w-10 h-10 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] disabled:opacity-40 disabled:hover:bg-[#FF5A1F] text-black flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed shadow-md"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
         </form>
       </div>
 

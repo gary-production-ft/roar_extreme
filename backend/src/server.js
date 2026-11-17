@@ -12,6 +12,37 @@ async function bootstrap() {
 
   try {
     await connectDatabase();
+    // Run initial expired membership check and schedule periodic sweep
+    import('./services/membershipCron.js').then(({ updateExpiredMemberships }) => {
+      updateExpiredMemberships().catch((err) => logger.error('Initial membership sweep error:', err));
+      setInterval(() => {
+        updateExpiredMemberships().catch((err) => logger.error('Periodic membership sweep error:', err));
+      }, 6 * 60 * 60 * 1000); // Sweep every 6 hours
+    });
+
+    // Initialize Phase 2 Hardware Door Transport and provision default door/devices
+    const { initDoorTransport, getDoorTransport } = await import('./services/doorTransport/index.js');
+    const { ensureDefaultDoorAndDevices, handleInboundDeviceEvent, sweepOfflineDevices } = await import('./services/doorService.js');
+
+    await ensureDefaultDoorAndDevices();
+    const transport = await initDoorTransport();
+    transport.on('device_event', (event) => {
+      handleInboundDeviceEvent(event).catch((err) => logger.error('Error handling device event:', err));
+    });
+
+    // Periodic sweep for offline devices every 30s
+    setInterval(() => {
+      sweepOfflineDevices().catch((err) => logger.error('Error sweeping offline devices:', err));
+    }, 30000);
+
+    // Warm AI caches: knowledge base, active plans, Gemini connection
+    const { warmKnowledgeCache } = await import('./services/knowledgeService.js');
+    const { warmGeminiConnection, getActivePlansCached } = await import('./services/aiService.js');
+    Promise.all([
+      warmKnowledgeCache(),
+      getActivePlansCached(),
+      warmGeminiConnection(),
+    ]).catch((err) => logger.warn('[WARMUP] Non-fatal warmup error:', err.message));
   } catch (err) {
     logger.error('Failed to connect to database during startup:', err);
   }

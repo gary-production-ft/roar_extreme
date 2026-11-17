@@ -10,6 +10,9 @@ import {
   ArrowRight,
   Phone,
   CheckCircle2,
+  UserCheck,
+  ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -44,6 +47,10 @@ interface DashboardData {
   attendedLeads: number;
   pendingLeads: number;
   conversionRate: string;
+  totalMembers: number;
+  activeMembers: number;
+  expiringSoonMembers: number;
+  todayAttendance: number;
   goalDistribution: Array<{ name: string; value: number }>;
   timeDistribution: Array<{ name: string; value: number }>;
   leadsByDay: Array<{ date: string; leads: number }>;
@@ -83,6 +90,10 @@ export const AdminDashboard: React.FC = () => {
         attendedLeads: raw.attendedLeads ?? raw.completedLeads ?? 0,
         pendingLeads: raw.pendingLeads ?? raw.newLeads ?? 0,
         conversionRate: raw.conversionRate !== undefined ? `${raw.conversionRate}%` : '0%',
+        totalMembers: raw.totalMembers ?? 0,
+        activeMembers: raw.activeMembers ?? 0,
+        expiringSoonMembers: raw.expiringSoonMembers ?? 0,
+        todayAttendance: raw.todayAttendance ?? 0,
         chatSessionsCount: raw.chatSessionsCount ?? raw.totalChatSessions ?? 0,
         recentLeads: raw.recentLeads || resData.recentLeads || [],
         goalDistribution: (raw.goalDistribution || charts.leadsByGoal || []).map((g: any) => ({
@@ -165,6 +176,75 @@ export const AdminDashboard: React.FC = () => {
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
+      </div>
+
+      {/* Membership & Attendance KPI Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link
+          to="/admin/members"
+          className="p-5 rounded-2xl bg-[#111111] hover:bg-[#161616] border border-white/10 hover:border-[#FF5A1F]/40 transition-all relative overflow-hidden block group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono uppercase text-white/50 tracking-wider">Active Members</span>
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-black transition-colors">
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="font-heading font-black text-3xl text-white">{data.activeMembers}</span>
+            <span className="text-xs text-white/40 font-mono">/ {data.totalMembers} total</span>
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/members"
+          className="p-5 rounded-2xl bg-[#111111] hover:bg-[#161616] border border-white/10 hover:border-amber-500/40 transition-all relative overflow-hidden block group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono uppercase text-white/50 tracking-wider">Expiring in 7 Days</span>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="font-heading font-black text-3xl text-amber-400">{data.expiringSoonMembers}</span>
+            <span className="text-xs text-white/40 font-mono">Needs Renewal</span>
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/access-logs"
+          className="p-5 rounded-2xl bg-[#111111] hover:bg-[#161616] border border-white/10 hover:border-[#FF5A1F]/40 transition-all relative overflow-hidden block group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono uppercase text-white/50 tracking-wider">Today's Check-Ins</span>
+            <div className="p-2 rounded-xl bg-[#FF5A1F]/10 text-[#FF5A1F] group-hover:bg-[#FF5A1F] group-hover:text-black transition-colors">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="font-heading font-black text-3xl text-white">{data.todayAttendance}</span>
+            <span className="text-xs text-[#FF5A1F]/80 font-mono">Turnstile / Manual</span>
+          </div>
+        </Link>
+
+        <a
+          href="/kiosk"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-5 rounded-2xl bg-gradient-to-br from-[#FF5A1F]/20 to-black border border-[#FF5A1F]/40 hover:border-[#FF5A1F] transition-all relative overflow-hidden block group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono uppercase text-[#FF5A1F] font-bold tracking-wider">Turnstile Kiosk</span>
+            <div className="p-2 rounded-xl bg-[#FF5A1F] text-black">
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="font-heading font-black text-xl text-white">LAUNCH SCANNER</div>
+            <span className="text-[10px] text-white/60 font-mono uppercase">Fullscreen WebCam Mode</span>
+          </div>
+        </a>
       </div>
 
       {/* KPI Cards */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Dumbbell, MapPin, Calendar, ArrowRight, Volume2, VolumeX } from 'lucide-react';
+import { Dumbbell, MapPin, Calendar, ArrowRight, Volume2, VolumeX, ThumbsUp, ThumbsDown } from 'lucide-react';
 import type { ChatMessageItem } from '../../services/chatService.ts';
+import { ChatService } from '../../services/chatService.ts';
 import { VoiceService } from '../../services/voiceService.ts';
 import { FormattedMessage } from './FormattedMessage.tsx';
 
@@ -8,10 +9,12 @@ interface ChatMessageProps {
   message: ChatMessageItem;
   language?: 'en' | 'hi' | 'mr';
   onActionClick?: (action: string) => void;
+  sessionId?: string;
 }
 
-export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language = 'en', onActionClick }) => {
+export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language = 'en', onActionClick, sessionId }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
 
@@ -27,6 +30,17 @@ export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language =
         onEnd: () => setIsPlaying(false),
       });
     }
+  };
+
+  const handleFeedback = async (rating: 'up' | 'down') => {
+    if (feedback || !sessionId) return;
+    setFeedback(rating);
+    await ChatService.submitFeedback({
+      messageId: message.id,
+      sessionId,
+      rating,
+      assistantText: message.content,
+    });
   };
 
   if (isSystem) {
@@ -76,7 +90,7 @@ export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language =
 
         {/* Audio Speaker Button for Assistant Messages */}
         {!isUser && !message.isStreaming && message.content && (
-          <div className="mt-1.5 flex items-center justify-end">
+          <div className="mt-1.5 flex items-center justify-between">
             <button
               type="button"
               onClick={handleToggleSpeak}
@@ -95,6 +109,38 @@ export const ChatbotMessage: React.FC<ChatMessageProps> = ({ message, language =
                 </>
               )}
             </button>
+
+            {/* Feedback thumbs */}
+            {sessionId && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleFeedback('up')}
+                  disabled={feedback !== null}
+                  title="Helpful"
+                  className={`w-5 h-5 flex items-center justify-center rounded transition-colors cursor-pointer ${
+                    feedback === 'up'
+                      ? 'text-green-400'
+                      : 'text-white/30 hover:text-green-400 disabled:cursor-default'
+                  }`}
+                >
+                  <ThumbsUp className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFeedback('down')}
+                  disabled={feedback !== null}
+                  title="Not helpful"
+                  className={`w-5 h-5 flex items-center justify-center rounded transition-colors cursor-pointer ${
+                    feedback === 'down'
+                      ? 'text-red-400'
+                      : 'text-white/30 hover:text-red-400 disabled:cursor-default'
+                  }`}
+                >
+                  <ThumbsDown className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

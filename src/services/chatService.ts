@@ -45,6 +45,10 @@ export class ChatService {
     return getOrCreateVisitorId();
   }
 
+  public static getCurrentSessionId(): string | null {
+    return this.sessionId;
+  }
+
   public static async getOrCreateSession(language: string = 'en'): Promise<string> {
     if (this.sessionId) return this.sessionId;
 
@@ -88,6 +92,7 @@ export class ChatService {
     onToolCall,
     onComplete,
     onError,
+    signal,
   }: {
     message: string;
     language?: string;
@@ -95,6 +100,7 @@ export class ChatService {
     onToolCall?: (tool: { name: string; arguments: Record<string, unknown> }) => void;
     onComplete: (fullText: string) => void;
     onError: (err: Error) => void;
+    signal?: AbortSignal;
   }): Promise<void> {
     const sessionId = await this.getOrCreateSession(language);
     const visitorId = this.getVisitorId();
@@ -113,6 +119,7 @@ export class ChatService {
           message,
           language,
         }),
+        signal,
       });
 
       if (!response.ok) {
@@ -179,6 +186,28 @@ export class ChatService {
     } catch (err) {
       console.error('Chat stream failed:', err);
       onError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
+  public static async submitFeedback({
+    messageId,
+    sessionId,
+    rating,
+    assistantText,
+  }: {
+    messageId: string;
+    sessionId: string;
+    rating: 'up' | 'down';
+    assistantText?: string;
+  }): Promise<void> {
+    try {
+      await fetch(apiUrl('/api/chat/feedback'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, sessionId, rating, assistantText: assistantText?.slice(0, 1000) }),
+      });
+    } catch {
+      // Non-critical — silently swallow network errors
     }
   }
 

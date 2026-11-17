@@ -17,6 +17,11 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import knowledgeRoutes from './routes/knowledgeRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import preferenceRoutes from './routes/preferenceRoutes.js';
+import accessRoutes from './routes/accessRoutes.js';
+import memberRoutes from './routes/memberRoutes.js';
+import planRoutes from './routes/planRoutes.js';
+import logsRoutes from './routes/logsRoutes.js';
+import doorRoutes from './routes/doorRoutes.js';
 
 export const app = express();
 
@@ -89,6 +94,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/preferences', preferenceRoutes);
+app.use('/api/access', accessRoutes);
+app.use('/api/members', memberRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/admin', logsRoutes);
+app.use('/api/admin', doorRoutes);
 
 // Serve static client assets in production if built
 const __filename = fileURLToPath(import.meta.url);

@@ -1,40 +1,79 @@
 import { KnowledgeDocument } from '../models/KnowledgeDocument.js';
+import { faqCache } from './faqCache.js';
+import { logger } from '../utils/logger.js';
+
+let cachedApprovedDocs = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 300000; // 5 minutes cache
+
+export async function warmKnowledgeCache() {
+  try {
+    const docs = await KnowledgeDocument.find({
+      verificationStatus: 'verified',
+      isActive: true,
+    }).sort({ category: 1, title: 1 }).lean();
+
+    cachedApprovedDocs = docs;
+    lastCacheTime = Date.now();
+    logger.info(`[KNOWLEDGE] Pre-warmed ${docs.length} verified knowledge documents in memory.`);
+    return docs;
+  } catch (err) {
+    logger.error('[KNOWLEDGE] Failed to warm knowledge cache:', err);
+    return [];
+  }
+}
+
+export function invalidateKnowledgeCache() {
+  cachedApprovedDocs = null;
+  lastCacheTime = 0;
+  faqCache.clear();
+  logger.info('[KNOWLEDGE] Knowledge and FAQ caches invalidated.');
+}
 
 export async function getApprovedKnowledge(category = null) {
-  const query = {
-    verificationStatus: 'verified',
-    isActive: true,
-  };
-  if (category) query.category = category;
+  if (!cachedApprovedDocs || Date.now() - lastCacheTime > CACHE_TTL_MS) {
+    await warmKnowledgeCache();
+  }
 
-  return KnowledgeDocument.find(query).sort({ category: 1, title: 1 });
+  const docs = cachedApprovedDocs || [];
+  if (category) {
+    return docs.filter((d) => d.category === category);
+  }
+  return docs;
 }
 
 export async function searchRelevantKnowledge(queryText) {
-  // Simple token/regex relevance search over title and content
-  const tokens = queryText
+  if (!cachedApprovedDocs || Date.now() - lastCacheTime > CACHE_TTL_MS) {
+    await warmKnowledgeCache();
+  }
+
+  const allDocs = cachedApprovedDocs || [];
+  const tokens = (queryText || '')
     .toLowerCase()
-    .replace(/[^\w\s]/g, '')
+    .replace(/[^\w\s\u0900-\u097F]/g, '')
     .split(/\s+/)
     .filter((w) => w.length > 2);
 
   if (tokens.length === 0) {
-    return getApprovedKnowledge();
+    return allDocs.slice(0, 8);
   }
 
-  const regexes = tokens.map((t) => new RegExp(t, 'i'));
+  // Fast in-memory token scoring
+  const scored = allDocs.map((doc) => {
+    const text = `${doc.title} ${doc.content} ${doc.category}`.toLowerCase();
+    let score = 0;
+    for (const token of tokens) {
+      if (text.includes(token)) score += 1;
+    }
+    return { doc, score };
+  });
 
-  const docs = await KnowledgeDocument.find({
-    verificationStatus: 'verified',
-    isActive: true,
-    $or: [
-      { title: { $in: regexes } },
-      { content: { $in: regexes } },
-      { category: { $in: regexes } },
-    ],
-  }).limit(8);
+  const matching = scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((s) => s.doc);
 
-  return docs;
+  return matching.length > 0 ? matching.slice(0, 8) : allDocs.slice(0, 6);
 }
 
 export async function listAllDocuments() {
@@ -47,7 +86,9 @@ export async function createKnowledgeDocument(data, adminName = 'admin') {
     updatedBy: adminName,
     lastVerifiedAt: data.verificationStatus === 'verified' ? new Date() : undefined,
   });
-  return doc.save();
+  const saved = await doc.save();
+  invalidateKnowledgeCache();
+  return saved;
 }
 
 export async function updateKnowledgeDocument(id, updates, adminName = 'admin') {
@@ -59,10 +100,14 @@ export async function updateKnowledgeDocument(id, updates, adminName = 'admin') 
     doc.lastVerifiedAt = new Date();
   }
 
-  return doc.save();
+  const saved = await doc.save();
+  invalidateKnowledgeCache();
+  return saved;
 }
 
 export async function deleteKnowledgeDocument(id) {
-  return KnowledgeDocument.findByIdAndDelete(id);
+  const deleted = await KnowledgeDocument.findByIdAndDelete(id);
+  invalidateKnowledgeCache();
+  return deleted;
 }
 

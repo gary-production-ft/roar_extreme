@@ -4,6 +4,7 @@ import { ChatMessage } from '../models/ChatMessage.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { generateChatStream } from './aiService.js';
 import { env } from '../config/environment.js';
+import { logger } from '../utils/logger.js';
 
 export async function getOrCreateSession(sessionId, visitorId = null) {
   const effectiveVisitorId = visitorId || `vis_${crypto.randomBytes(8).toString('hex')}`;
@@ -22,15 +23,16 @@ export async function getOrCreateSession(sessionId, visitorId = null) {
     });
     await session.save();
   } else {
+    // Non-blocking update of lastActiveAt
     session.lastActiveAt = new Date();
-    await session.save();
+    session.save().catch((err) => logger.warn('[SESSION] Non-blocking update error:', err.message));
   }
 
   return session;
 }
 
 export async function getSessionHistory(sessionId) {
-  return ChatMessage.find({ sessionId }).sort({ createdAt: 1 }).limit(50);
+  return ChatMessage.find({ sessionId }).sort({ createdAt: 1 }).limit(50).lean();
 }
 
 export async function deleteSessionHistory(sessionId) {
@@ -39,39 +41,46 @@ export async function deleteSessionHistory(sessionId) {
 }
 
 export async function processUserMessage({ sessionId, visitorId, content, onEvent }) {
-  const session = await getOrCreateSession(sessionId, visitorId);
+  const cleanContent = content.trim();
 
-  // Save incoming user message
-  const userMsg = new ChatMessage({
-    sessionId: session.sessionId,
-    role: 'user',
-    content: content.trim(),
-  });
-  await userMsg.save();
+  // Run session check and recent history lookup in parallel (< 15ms)
+  const [session, recentMessages] = await Promise.all([
+    getOrCreateSession(sessionId, visitorId),
+    ChatMessage.find({ sessionId })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean(),
+  ]);
 
-  // Load the MOST RECENT history for context (sorted descending, then reversed)
-  const recentMessages = await ChatMessage.find({ sessionId: session.sessionId })
-    .sort({ createdAt: -1 })
-    .limit(12);
   const history = recentMessages.reverse();
 
-  // Generate and stream AI response
+  // Non-blocking background save of incoming user message
+  new ChatMessage({
+    sessionId: session.sessionId,
+    role: 'user',
+    content: cleanContent,
+  })
+    .save()
+    .catch((err) => logger.error('[CHAT] Error saving user message in background:', err.message));
+
+  // Generate and stream AI response (SSE)
   const assistantResponse = await generateChatStream({
     sessionId: session.sessionId,
     messages: history,
-    currentMessage: content.trim(),
+    currentMessage: cleanContent,
     visitorId: session.anonymousVisitorId,
     preferredLanguage: session.preferredLanguage,
     onEvent,
   });
 
-  // Save assistant message
-  const assistantMsg = new ChatMessage({
+  // Non-blocking background save of assistant message
+  new ChatMessage({
     sessionId: session.sessionId,
     role: 'assistant',
     content: assistantResponse,
-  });
-  await assistantMsg.save();
+  })
+    .save()
+    .catch((err) => logger.error('[CHAT] Error saving assistant message in background:', err.message));
 
   return {
     sessionId: session.sessionId,
@@ -88,4 +97,3 @@ export async function recordHandoff({ sessionId, visitorId, fullName, phone, mes
     details: { fullName, phone, message, visitorId },
   });
 }
-

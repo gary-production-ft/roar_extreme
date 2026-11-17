@@ -44,3 +44,15 @@ export const chatLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const accessLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120, // 2 requests/sec max for kiosk device
+  message: {
+    decision: 'denied',
+    reason: 'rate_limited',
+    memberName: null,
+    daysRemaining: 0,
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

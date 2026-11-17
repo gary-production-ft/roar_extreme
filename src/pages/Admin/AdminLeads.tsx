@@ -19,6 +19,7 @@ import {
   X,
   Save,
   UserPlus,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiUrl } from '../../config/api';
@@ -67,6 +68,91 @@ export const AdminLeads: React.FC = () => {
   const [activeNotesLead, setActiveNotesLead] = useState<LeadItem | null>(null);
   const [notesText, setNotesText] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Convert to Member Modal State
+  const [convertModalLead, setConvertModalLead] = useState<LeadItem | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<Array<{ _id: string; name: string; price: number; durationDays: number }>>([]);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
+  const [convertForm, setConvertForm] = useState({
+    planId: '',
+    amountPaid: 0,
+    paymentMethod: 'cash',
+    startDate: new Date().toISOString().slice(0, 10),
+  });
+
+  const fetchPlans = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/plans'));
+      if (res.ok) {
+        const data = await res.json();
+        setAvailablePlans(data.plans || []);
+        if (data.plans?.length > 0) {
+          setConvertForm((prev) => ({
+            ...prev,
+            planId: data.plans[0]._id,
+            amountPaid: data.plans[0].price,
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching plans:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const handleOpenConvertModal = (lead: LeadItem) => {
+    setConvertModalLead(lead);
+    setConvertError(null);
+    if (availablePlans.length > 0) {
+      setConvertForm({
+        planId: availablePlans[0]._id,
+        amountPaid: availablePlans[0].price,
+        paymentMethod: 'cash',
+        startDate: new Date().toISOString().slice(0, 10),
+      });
+    }
+  };
+
+  const handleConvertLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!convertModalLead) return;
+    setIsConverting(true);
+    setConvertError(null);
+    try {
+      const res = await fetch(apiUrl(`/api/members/convert-lead/${convertModalLead._id}`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          planId: convertForm.planId,
+          amountPaid: Number(convertForm.amountPaid),
+          paymentMethod: convertForm.paymentMethod,
+          startDate: convertForm.startDate,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Success! Lead converted to Member ${data.member.memberId} (${data.member.name}).`);
+        setConvertModalLead(null);
+        fetchLeads();
+      } else {
+        const err = await res.json();
+        setConvertError(err.message || 'Failed to convert lead to member.');
+      }
+    } catch (err) {
+      console.error('Error converting lead:', err);
+      setConvertError('Network error during conversion.');
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -225,6 +311,18 @@ export const AdminLeads: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const s = (status || '').toLowerCase();
     switch (s) {
+      case 'converted':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold">
+            <Sparkles className="w-3 h-3 text-emerald-400" /> Converted
+          </span>
+        );
+      case 'archived':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono uppercase bg-white/10 text-white/50 border border-white/15">
+            Archived
+          </span>
+        );
       case 'attended':
       case 'completed':
         return (
@@ -261,6 +359,8 @@ export const AdminLeads: React.FC = () => {
 
   const normalizeStatusForSelect = (status: string) => {
     const s = (status || '').toLowerCase();
+    if (s === 'converted') return 'converted';
+    if (s === 'archived') return 'archived';
     if (s === 'attended' || s === 'completed') return 'Completed';
     if (s === 'contacted') return 'Contacted';
     if (s === 'scheduled') return 'Scheduled';
@@ -502,6 +602,18 @@ export const AdminLeads: React.FC = () => {
                           <UserCheck className="w-3.5 h-3.5" />
                         </button>
 
+                        {/* Convert to Member Button */}
+                        {lead.status !== 'converted' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenConvertModal(lead)}
+                            title="Convert to Studio Member"
+                            className="p-1.5 rounded-lg bg-[#FF5A1F]/20 hover:bg-[#FF5A1F] text-[#FF5A1F] hover:text-black transition-all cursor-pointer shadow-sm"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
                         {/* Status Select Dropdown */}
                         <select
                           value={normalizeStatusForSelect(lead.status)}
@@ -513,6 +625,8 @@ export const AdminLeads: React.FC = () => {
                           <option value="Contacted">Contacted</option>
                           <option value="Scheduled">Scheduled</option>
                           <option value="Completed">Attended</option>
+                          <option value="converted">Converted</option>
+                          <option value="archived">Archived</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
 
@@ -740,6 +854,126 @@ export const AdminLeads: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Member Modal */}
+      {convertModalLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-[#121212] border border-white/15 rounded-2xl p-6 shadow-2xl text-white font-sans">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#FF5A1F]" />
+                <div>
+                  <h3 className="font-heading font-black text-sm uppercase tracking-wider text-white">
+                    Convert Lead to Member
+                  </h3>
+                  <span className="font-mono text-[10px] text-white/50">
+                    {convertModalLead.fullName} ({convertModalLead.phone})
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setConvertModalLead(null)}
+                className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {convertError && (
+              <div className="mt-4 p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-400 text-xs">
+                {convertError}
+              </div>
+            )}
+
+            <form onSubmit={handleConvertLeadSubmit} className="mt-4 space-y-3.5 text-xs">
+              <div>
+                <label className="block text-[11px] uppercase font-mono text-white/60 mb-1">
+                  Membership Plan *
+                </label>
+                <select
+                  value={convertForm.planId}
+                  onChange={(e) => {
+                    const plan = availablePlans.find((p) => p._id === e.target.value);
+                    setConvertForm({
+                      ...convertForm,
+                      planId: e.target.value,
+                      amountPaid: plan ? plan.price : 0,
+                    });
+                  }}
+                  className="w-full bg-[#181818] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FF5A1F]"
+                >
+                  {availablePlans.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.durationDays} days) - ₹{p.price.toLocaleString('en-IN')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase font-mono text-white/60 mb-1">
+                  Membership Start Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={convertForm.startDate}
+                  onChange={(e) => setConvertForm({ ...convertForm, startDate: e.target.value })}
+                  className="w-full bg-[#181818] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FF5A1F]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] uppercase font-mono text-white/60 mb-1">
+                    First Payment Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={convertForm.amountPaid}
+                    onChange={(e) => setConvertForm({ ...convertForm, amountPaid: Number(e.target.value) })}
+                    className="w-full bg-[#181818] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FF5A1F]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase font-mono text-white/60 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={convertForm.paymentMethod}
+                    onChange={(e) => setConvertForm({ ...convertForm, paymentMethod: e.target.value })}
+                    className="w-full bg-[#181818] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FF5A1F]"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="card">Card</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setConvertModalLead(null)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isConverting}
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] disabled:opacity-50 text-black font-bold uppercase tracking-wider text-xs shadow-lg shadow-[#FF5A1F]/20 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isConverting ? 'Converting...' : 'Convert to Member'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

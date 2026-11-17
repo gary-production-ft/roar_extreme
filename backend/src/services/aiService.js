@@ -5,33 +5,27 @@ import { logger } from '../utils/logger.js';
 import { buildSystemPrompt } from '../ai/systemPrompt.js';
 import { searchRelevantKnowledge } from './knowledgeService.js';
 import { getPreferences, extractPotentialPreferences } from './memoryService.js';
+import { resolveDirectIntent } from '../ai/intentRouter.js';
+import { faqCache } from './faqCache.js';
+import { MembershipPlan } from '../models/MembershipPlan.js';
 
 let geminiClient = null;
 let openaiClient = null;
+let warmedActivePlans = null;
+let lastPlanTime = 0;
 
-/**
- * Categorize Gemini API errors into actionable diagnostic categories.
- */
-export function categorizeGeminiError(err) {
-  if (!env.geminiApiKey) return 'GEMINI_API_KEY_MISSING';
-  const msg = (err?.message || '').toLowerCase();
-  const status = err?.status || err?.statusCode;
-  if (status === 404 || msg.includes('not found') || msg.includes('model not supported')) {
-    return 'GEMINI_MODEL_INVALID';
+export async function getActivePlansCached() {
+  if (warmedActivePlans && Date.now() - lastPlanTime < 300000) {
+    return warmedActivePlans;
   }
-  if (status === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {
-    return 'GEMINI_RATE_LIMIT';
+  try {
+    const plans = await MembershipPlan.find({ active: true }).sort({ durationDays: 1 }).lean();
+    warmedActivePlans = plans;
+    lastPlanTime = Date.now();
+    return plans;
+  } catch (err) {
+    return [];
   }
-  if (msg.includes('quota') || msg.includes('resource_exhausted')) {
-    return 'GEMINI_QUOTA_EXCEEDED';
-  }
-  if (msg.includes('timeout') || msg.includes('deadline') || msg.includes('timed out')) {
-    return 'GEMINI_TIMEOUT';
-  }
-  if (msg.includes('fetch failed') || msg.includes('econnrefused') || msg.includes('network')) {
-    return 'GEMINI_NETWORK_ERROR';
-  }
-  return 'BACKEND_ERROR';
 }
 
 function getGeminiClient() {
@@ -49,37 +43,30 @@ function getOpenAIClient() {
 }
 
 /**
- * Detect tool action intents from user query to trigger interactive UI widgets.
+ * Startup warm-up: pre-connects and tests Gemini model to warm DNS & TLS
  */
-function detectActionTriggers(query) {
-  const lower = query.toLowerCase();
-  const triggers = [];
-
-  // Only trigger free pass card if the user asks for a pass or booking
-  if (/\b(free\s*(pass|trial|session)|claim|book\s*session|apply|trial\s*pass|register)\b/.test(lower)) {
-    triggers.push({
-      name: 'open_lead_form',
-      arguments: { source: 'chat_recommendation' },
+export async function warmGeminiConnection() {
+  const gemini = getGeminiClient();
+  if (!gemini) return;
+  try {
+    logger.info(`[WARMUP] Warming Gemini API connection for model: ${env.geminiModel}...`);
+    const stream = await gemini.models.generateContentStream({
+      model: env.geminiModel,
+      contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
+      config: { maxOutputTokens: 2 },
     });
+    for await (const chunk of stream) {
+      // consume warm-up token
+      break;
+    }
+    logger.info('[WARMUP] Gemini API connection and socket warmed successfully.');
+  } catch (err) {
+    logger.warn(`[WARMUP] Gemini warmup notice: ${err.message}`);
   }
-
-  // Only trigger location card if user specifically asks for location/directions/map
-  if (/\b(where|location|address|map|reach|directions|circle|road)\b/.test(lower) && !/\b(workout|training|chest|exercise|bicep)\b/.test(lower)) {
-    triggers.push({
-      name: 'get_gym_location',
-      arguments: {},
-    });
-  }
-
-  return triggers;
 }
 
 /**
- * Format and sanitize conversation turns for Google Gemini API.
- * Guarantees:
- * 1. Strict alternating sequence: user -> model -> user -> model -> user
- * 2. Starts with role 'user'
- * 3. Ends with role 'user' (containing the current prompt)
+ * Format conversation history into strictly alternating user/model turns for Gemini
  */
 function sanitizeGeminiTurns(rawMessages, currentMessage) {
   const turns = [];
@@ -96,7 +83,6 @@ function sanitizeGeminiTurns(rawMessages, currentMessage) {
     }
   }
 
-  // Ensure current query is the final 'user' turn
   if (currentMessage) {
     const curText = currentMessage.trim();
     if (turns.length > 0 && turns[turns.length - 1].role === 'user') {
@@ -106,271 +92,269 @@ function sanitizeGeminiTurns(rawMessages, currentMessage) {
     }
   }
 
-  // Gemini requires starting with user
-  while (turns.length > 0 && turns[0].role !== 'user') {
-    turns.shift();
-  }
-
-  // Gemini requires ending with user
-  while (turns.length > 0 && turns[turns.length - 1].role !== 'user') {
-    turns.pop();
-  }
+  while (turns.length > 0 && turns[0].role !== 'user') turns.shift();
+  while (turns.length > 0 && turns[turns.length - 1].role !== 'user') turns.pop();
 
   return turns;
 }
 
 /**
- * Intelligent Grounded Fallback Engine when neither Gemini nor OpenAI is available.
+ * Stream text chunks word-by-word with small interval to simulate fluid typing
  */
-async function generateGroundedResponse({ query, language }) {
-  const lower = query.toLowerCase();
-  const relevantDocs = await searchRelevantKnowledge(query);
-  const context = relevantDocs.map((d) => d.content).join('\n');
-
-  const isHindi = language === 'hi' || /[\u0900-\u097F]/.test(query) || /\b(namaste|kaise|kya|samay|jagah)\b/.test(lower);
-  const isMarathi = language === 'mr' || /\b(namaskar|kiti|kuthe|vel|vyayam)\b/.test(lower);
-
-  // Intent: Free Session / Trial Pass
-  if (/\b(free|trial|session|pass|demo|register|join|apply)\b/.test(lower)) {
-    if (isMarathi) {
-      return `रोअर फिटनेस नाशिक मध्ये आपले स्वागत आहे! तुम्ही आमच्या **फ्री सिंगल सेशन पास** साठी अर्ज करू शकता. यात ६० मिनिटांचा वर्कआउट आणि हेड कोच सोबत १-ऑन-१ कन्सल्टेशन समाविष्ट आहे. अर्ज करण्यासाठी आमच्या [Registration Page](/register) ला भेट द्या.`;
+async function streamWords(text, onEvent) {
+  const words = text.split(' ');
+  for (let i = 0; i < words.length; i++) {
+    const delta = (i === 0 ? '' : ' ') + words[i];
+    onEvent({ type: 'text_delta', content: delta, text: delta });
+    if (i < 8) {
+      await new Promise((r) => setTimeout(r, 6)); // First few words ultra fast
     }
-    if (isHindi) {
-      return `रोअर फिटनेस नाशिक में आपका स्वागत है! आप हमारे **फ्री सिंगल सेशन पास** के लिए आवेदन कर सकते हैं। इसमें ६० मिनट का वर्कआउट और हेड कोच के साथ १-ऑन-१ कंसल्टेशन शामिल है। आवेदन करने के लिए [Registration Page](/register) पर जाएं।`;
-    }
-    return `Welcome to Roar Extreme! You can claim a complimentary **Free Single Session Pass** right now. This includes a full rooftop arena tour, a 60-minute guided trial workout, and a 1-on-1 consultation with our head coach. Click the Free Pass button below to apply!`;
   }
-
-  // Intent: Timing / Hours
-  if (/\b(time|timing|hours|open|close|sunday|schedule)\b/.test(lower)) {
-    if (isMarathi) {
-      return `रोअर फिटनेसचे कामाचे तास: **सोमवार ते शनिवार सकाळी ६:०० ते रात्री १०:००**. रविवार हा रिकव्हरीचा दिवस असतो. आमची जिम ६ व्या मजल्यावर (टेरेस), रुशिराज रीजन्सी, विद्या विकास सर्कल, गंगापूर रोड येथे आहे.`;
-    }
-    if (isHindi) {
-      return `रोअर फिटनेस का समय: **सोमवार से शनिवार सुबह ६:०० से रात १०:०० बजे तक**। रविवार रिकवरी डे है। हमारी जिम छठवीं मंजिल (टेरेस), रुशिराज रीजेंसी, विद्या विकास सर्कल, गंगापुर रोड, नाशिक पर स्थित है।`;
-    }
-    return `Roar Extreme operates **Monday through Saturday from 6:00 AM to 10:00 PM**. Sunday is dedicated to physical recovery and maintenance. We are located on the 6th Floor Terrace at Rushiraj Regency, Vidya Vikas Circle, Gangapur Road, Nashik.`;
-  }
-
-  // Intent: Location / Address
-  if (/\b(location|address|where|place|map|reach|directions|circle|road)\b/.test(lower)) {
-    if (isMarathi) {
-      return `आमचा पत्ता: **६ वा मजला टेरेस, रुशिराज रीजन्सी, विद्या विकास सर्कल, गंगापूर रोड, नाशिक, महाराष्ट्र**। ५ व्या मजल्यापर्यंत लिफ्ट घ्या आणि नंतर टेरेससाठी पायऱ्या वापरा.`;
-    }
-    if (isHindi) {
-      return `हमारा पता: **६०१/६०२, रुशिराज रीजेंसी, विद्या विकास सर्कल, एक्सिस बैंक के ऊपर, पाटिल कॉलोनी, कनाडा कॉर्नर, नाशिक, महाराष्ट्र ४२२००५**। ५वीं मंजिल तक लिफ्ट लें और फिर टेरेस तक सीढ़ियों का उपयोग करें।`;
-    }
-    return `Our official training facility is located at:\n**601/602 Rushiraj Regency, Vidya Vikas Circle, above Axis Bank, Patil Colony, Canada Corner, Nashik, Maharashtra 422005.**\nTake the elevator to the 5th floor, then take the dedicated staircase up to the rooftop terrace arena!`;
-  }
-
-  // Intent: Training Disciplines
-  if (/\b(training|program|zumba|crossfit|kickboxing|strength|cardio|coach|trainer|muscle|weight)\b/.test(lower)) {
-    return `At Roar Extreme Nashik, we offer 8 verified disciplines:\n1. **General Gym Training** — Resistance machinery & floor coaching\n2. **Strength Training** — Calibrated barbells, dumbbells & power platforms\n3. **Cardio Fitness** — Treadmills, ellipticals & endurance gear\n4. **Weight Management** — Metabolic fat-loss circuits\n5. **Zumba** — High-energy group aerobic dance\n6. **CrossFit** — Functional multi-joint rig workouts\n7. **Kickboxing** — Combat agility & striking\n8. **Personal Coaching** — 1-on-1 tailored biomechanics.\nWould you like to book a free session to try any of these?`;
-  }
-
-  // Intent: Pricing / Fees
-  if (/\b(price|pricing|fees|cost|package|membership|charges|month|year)\b/.test(lower)) {
-    return `Directory catalog plans start from ₹6,500/month (with 3-month and annual options available). Because seasonal offers and personalized goal packages are verified directly by management, we strongly recommend claiming your **Free Single Session Pass** first to tour the rooftop and speak with our head coach!`;
-  }
-
-  if (context) {
-    return `Here is verified information from Roar Fitness Nashik:\n\n${context.slice(0, 500)}\n\nIs there anything specific you would like to know about our rooftop training arena, timings, or free pass?`;
-  }
-
-  return `Welcome to Roar Extreme Nashik! Train harder, move stronger, and unleash your inner beast. I can help you with our 8 training disciplines, rooftop facility address on Gangapur Road, operating hours (6 AM - 10 PM), or claiming your Free Session Pass. How can I assist your fitness journey today?`;
 }
 
+/**
+ * Main Chat Streaming Engine
+ */
 export async function generateChatStream({
   sessionId,
-  messages,
+  messages = [],
   currentMessage = '',
   visitorId = '',
   preferredLanguage = 'en',
   onEvent,
 }) {
+  const reqStart = performance.now();
   onEvent({ type: 'message_start' });
 
-  // 1. Consented user preferences
-  const prefsArray = await getPreferences(sessionId);
+  const rawUserQuery = (currentMessage || messages[messages.length - 1]?.content || '').trim();
+  // Input length defense: enforce max 500 characters
+  const userQuery = rawUserQuery.length > 500 ? rawUserQuery.slice(0, 500) : rawUserQuery;
+
+  // Retrieve cached membership plans
+  const activePlans = await getActivePlansCached();
+
+  // ──────────────────────────────────────────────────────────
+  // 1. FAST PATH A: Instant Intent Router (Zero LLM, < 15ms)
+  // ──────────────────────────────────────────────────────────
+  const routerMatch = resolveDirectIntent({
+    query: userQuery,
+    language: preferredLanguage,
+    activePlans,
+  });
+
+  if (routerMatch.matched) {
+    const routerDuration = Math.round(performance.now() - reqStart);
+    logger.info(`[CHAT:ROUTER] Intercepted intent [${routerMatch.intent}] in ${routerDuration}ms (Zero LLM round trips).`);
+
+    // Stream out words smoothly
+    await streamWords(routerMatch.response, onEvent);
+
+    onEvent({
+      type: 'message_complete',
+      fullResponse: routerMatch.response,
+      content: routerMatch.response,
+      provider: 'intent_router',
+      intent: routerMatch.intent,
+      ttft: routerDuration,
+      totalDuration: Math.round(performance.now() - reqStart),
+    });
+
+    return routerMatch.response;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 2. FAST PATH B: In-Memory LRU FAQ Cache (Zero LLM, < 5ms)
+  // ──────────────────────────────────────────────────────────
+  const cachedAnswer = faqCache.get(userQuery);
+  if (cachedAnswer) {
+    const cacheDuration = Math.round(performance.now() - reqStart);
+    logger.info(`[CHAT:CACHE] Cache HIT for "${userQuery.slice(0, 30)}" in ${cacheDuration}ms.`);
+
+    await streamWords(cachedAnswer, onEvent);
+
+    onEvent({
+      type: 'message_complete',
+      fullResponse: cachedAnswer,
+      content: cachedAnswer,
+      provider: 'faq_cache',
+      ttft: cacheDuration,
+      totalDuration: Math.round(performance.now() - reqStart),
+    });
+
+    return cachedAnswer;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 3. PARALLEL CONTEXT GATHERING: DB reads in parallel (< 25ms)
+  // ──────────────────────────────────────────────────────────
+  const dbStart = performance.now();
+  const [prefsArray, relevantDocs] = await Promise.all([
+    getPreferences(sessionId),
+    searchRelevantKnowledge(userQuery),
+  ]);
+  const dbTime = Math.round(performance.now() - dbStart);
+
   const userPreferences = {};
   prefsArray.forEach((p) => {
     userPreferences[p.preferenceKey] = p.preferenceValue;
   });
 
-  // 2. Grounded knowledge retrieval
-  const lastUserMsg = currentMessage || messages[messages.length - 1]?.content || '';
-  const relevantDocs = await searchRelevantKnowledge(lastUserMsg);
   const knowledgeContext = relevantDocs
     .map((d) => `[${d.category.toUpperCase()}] ${d.title}: ${d.content}`)
     .join('\n\n');
 
-  // 3. Potential memory extraction
-  const potentialMemory = extractPotentialPreferences(lastUserMsg);
+  const potentialMemory = extractPotentialPreferences(userQuery);
 
-  // 4. Trigger tool action events if specifically requested
-  const detectedTools = detectActionTriggers(lastUserMsg);
-  detectedTools.forEach((tool) => {
-    onEvent({ type: 'tool_result', tool: tool.name, result: tool.arguments });
-  });
-
-  // 5. System prompt
   const systemPrompt = buildSystemPrompt({
     knowledgeContext,
     userPreferences,
     language: preferredLanguage,
+    activePlans,
   });
 
-  // 6. Primary Provider: Google Gemini API (Google AI Studio)
+  // Limit conversation history to the most recent 6 messages to minimize token processing
+  const recentHistory = messages.slice(-6);
+  const contents = sanitizeGeminiTurns(recentHistory, userQuery);
+
+  // ──────────────────────────────────────────────────────────
+  // 4. PRIMARY PROVIDER: Google Gemini with 3.5s TTFT Timeout
+  // ──────────────────────────────────────────────────────────
   const gemini = getGeminiClient();
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const startTime = Date.now();
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
   if (gemini) {
+    let ttft = null;
+    let geminiResponse = '';
+    const geminiStart = performance.now();
+
     try {
-      logger.info(`[CHAT] [${requestId}] Starting Gemini request. Model: ${env.geminiModel}, Session: [${sessionId}]`);
+      logger.info(`[CHAT] [${requestId}] Dispatching to Gemini (${env.geminiModel}) [DB: ${dbTime}ms]`);
 
-      // Strictly alternating sanitized history for Gemini
-      const contents = sanitizeGeminiTurns(messages, lastUserMsg);
-
-      const stream = await gemini.models.generateContentStream({
+      // Race Gemini stream against a 3,500ms TTFT deadline
+      const streamPromise = gemini.models.generateContentStream({
         model: env.geminiModel,
         contents,
         config: {
           systemInstruction: systemPrompt,
-          temperature: 0.7,
+          temperature: 0.6,
+          maxOutputTokens: 250, // Enforce crisp, compact answers
         },
       });
 
-      let fullResponse = '';
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('GEMINI_TTFT_TIMEOUT')), 3500)
+      );
+
+      const stream = await Promise.race([streamPromise, timeoutPromise]);
+
       for await (const chunk of stream) {
-        const textChunk = chunk.text || '';
-        if (textChunk) {
-          fullResponse += textChunk;
-          onEvent({ type: 'text_delta', content: textChunk, text: textChunk });
-        }
-      }
-
-      const durationMs = Date.now() - startTime;
-      logger.info(`[CHAT] [${requestId}] Gemini stream completed in ${durationMs}ms`);
-
-      onEvent({
-        type: 'message_complete',
-        fullResponse,
-        content: fullResponse,
-        potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
-        provider: 'gemini',
-      });
-
-      return fullResponse;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      const errorCategory = categorizeGeminiError(err);
-      logger.warn(`[CHAT] [${requestId}] Gemini error [${errorCategory}] after ${durationMs}ms: ${err.message}`);
-
-      // If configured model was not found, attempt recovery with verified standard model
-      if (errorCategory === 'GEMINI_MODEL_INVALID' && env.geminiModel !== 'gemini-2.5-flash') {
-        try {
-          logger.info(`[CHAT] [${requestId}] Recovering with standard supported model 'gemini-2.5-flash'...`);
-          const contents = sanitizeGeminiTurns(messages, lastUserMsg);
-          const fallbackStream = await gemini.models.generateContentStream({
-            model: 'gemini-2.5-flash',
-            contents,
-            config: {
-              systemInstruction: systemPrompt,
-              temperature: 0.7,
-            },
-          });
-
-          let fullResponse = '';
-          for await (const chunk of fallbackStream) {
-            const textChunk = chunk.text || '';
-            if (textChunk) {
-              fullResponse += textChunk;
-              onEvent({ type: 'text_delta', content: textChunk, text: textChunk });
-            }
+        const text = chunk.text || '';
+        if (text) {
+          if (!ttft) {
+            ttft = Math.round(performance.now() - reqStart);
           }
-
-          onEvent({
-            type: 'message_complete',
-            fullResponse,
-            content: fullResponse,
-            potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
-            provider: 'gemini-2.5-flash',
-          });
-
-          return fullResponse;
-        } catch (recoveryErr) {
-          logger.warn(`[CHAT] [${requestId}] Model recovery failed: ${recoveryErr.message}`);
+          geminiResponse += text;
+          onEvent({ type: 'text_delta', content: text, text });
         }
       }
+
+      if (geminiResponse.trim()) {
+        const totalDuration = Math.round(performance.now() - reqStart);
+        logger.info(`[CHAT] [${requestId}] Gemini stream completed. TTFT: ${ttft}ms, Total: ${totalDuration}ms`);
+
+        // Cache successful response in LRU cache
+        faqCache.set(userQuery, geminiResponse);
+
+        onEvent({
+          type: 'message_complete',
+          fullResponse: geminiResponse,
+          content: geminiResponse,
+          provider: 'gemini',
+          ttft,
+          totalDuration,
+          dbTime,
+          potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
+        });
+
+        return geminiResponse;
+      }
+    } catch (err) {
+      const elapsed = Math.round(performance.now() - geminiStart);
+      logger.warn(`[CHAT] [${requestId}] Gemini aborted (${err.message}) after ${elapsed}ms. Initiating instant failover.`);
     }
   }
 
-  // 7. Secondary Provider: OpenAI (if configured)
+  // ──────────────────────────────────────────────────────────
+  // 5. SECONDARY PROVIDER: OpenAI Fallback (gpt-4o-mini)
+  // ──────────────────────────────────────────────────────────
   const openai = getOpenAIClient();
   if (openai) {
     try {
-      logger.info(`Routing chat to OpenAI (${env.aiModel})`);
+      logger.info(`[CHAT] [${requestId}] Routing failover to OpenAI (${env.openaiModel})`);
       const formattedMessages = [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-8).map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        ...recentHistory.map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user', content: userQuery },
       ];
 
       const stream = await openai.chat.completions.create({
-        model: env.aiModel,
+        model: env.openaiModel,
         messages: formattedMessages,
         stream: true,
-        temperature: 0.7,
-        max_tokens: 600,
+        temperature: 0.6,
+        max_tokens: 250,
       });
 
       let fullResponse = '';
+      let ttft = null;
       for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
-        if (delta?.content) {
-          fullResponse += delta.content;
-          onEvent({ type: 'text_delta', content: delta.content });
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          if (!ttft) ttft = Math.round(performance.now() - reqStart);
+          fullResponse += delta;
+          onEvent({ type: 'text_delta', content: delta, text: delta });
         }
       }
 
-      onEvent({
-        type: 'message_complete',
-        fullResponse,
-        potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
-      });
-
-      return fullResponse;
+      if (fullResponse.trim()) {
+        faqCache.set(userQuery, fullResponse);
+        onEvent({
+          type: 'message_complete',
+          fullResponse,
+          content: fullResponse,
+          provider: 'openai',
+          ttft,
+          totalDuration: Math.round(performance.now() - reqStart),
+        });
+        return fullResponse;
+      }
     } catch (err) {
-      logger.warn(`OpenAI streaming failed: ${err.message}`);
+      logger.warn(`[CHAT] OpenAI fallback failed: ${err.message}`);
     }
   }
 
-  // 8. Grounded Knowledge Fallback Engine
-  logger.info(`Using Grounded Local Knowledge Engine for session [${sessionId}]`);
-  const fallbackAnswer = await generateGroundedResponse({
-    query: lastUserMsg,
-    sessionId,
-    language: preferredLanguage,
-    preferences: userPreferences,
-  });
+  // ──────────────────────────────────────────────────────────
+  // 6. TERTIARY FALLBACK: Grounded Knowledge Engine (Always Succeeds)
+  // ──────────────────────────────────────────────────────────
+  logger.info(`[CHAT] Using Deterministic Grounded Fallback for "${userQuery.slice(0, 30)}"`);
+  const firstDoc = relevantDocs[0]?.content || '';
+  let fallbackAnswer = `At ROAR EXTREME Nashik, we offer 8 disciplines including Strength, CrossFit, and Boxing. ${firstDoc ? firstDoc.slice(0, 180) + '.' : ''} Please check with our front-desk reception or book your Free Trial Pass at /register!`;
 
-  const words = fallbackAnswer.split(' ');
-  for (let i = 0; i < words.length; i++) {
-    const word = (i === 0 ? '' : ' ') + words[i];
-    onEvent({ type: 'text_delta', content: word, text: word });
-    await new Promise((r) => setTimeout(r, 18));
+  if (preferredLanguage === 'hi') {
+    fallbackAnswer = `रोअर एक्सट्रीम नाशिक में आपका स्वागत है! हमारे यहाँ स्ट्रेंथ ट्रेनिंग, कार्डियो और क्रॉसफिट सहित ८ ट्रेनिंग प्रोग्राम्स हैं। अधिक जानकारी के लिए रिसेप्शन पर आएं या /register पर फ्री ट्रायल पास बुक करें।`;
+  } else if (preferredLanguage === 'mr') {
+    fallbackAnswer = `रोअर एक्स्ट्रीम नाशिक मध्ये आपले स्वागत आहे! आमच्याकडे स्ट्रेंथ, कार्डिओ आणि झुम्बासह ८ वर्कआउट प्रकार आहेत. रिसेप्शनला भेट द्या किंवा /register वरून फ्री ट्रायल पास मिळवा.`;
   }
+
+  await streamWords(fallbackAnswer, onEvent);
 
   onEvent({
     type: 'message_complete',
     fullResponse: fallbackAnswer,
     content: fallbackAnswer,
-    potentialMemory: Object.keys(potentialMemory).length > 0 ? potentialMemory : null,
     provider: 'grounded_knowledge_fallback',
     isFallback: true,
+    totalDuration: Math.round(performance.now() - reqStart),
   });
 
   return fallbackAnswer;

@@ -7,6 +7,7 @@ import {
   recordHandoff,
 } from '../services/chatService.js';
 import { ChatSession } from '../models/ChatSession.js';
+import { ChatFeedback } from '../models/ChatFeedback.js';
 
 export const sessionSchema = z.object({
   body: z.object({
@@ -182,6 +183,30 @@ export async function updateConsent(req, res, next) {
       consentStatus: session.consentStatus,
       message: `Memory consent updated to ${consentStatus}`,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export const feedbackSchema = z.object({
+  body: z.object({
+    messageId: z.string().min(1),
+    sessionId: z.string().min(5),
+    rating: z.enum(['up', 'down']),
+    assistantText: z.string().max(1000).optional(),
+  }),
+});
+
+export async function submitFeedback(req, res, next) {
+  try {
+    const { messageId, sessionId, rating, assistantText } = req.validatedData.body;
+    // Upsert: one rating per messageId (last rating wins)
+    await ChatFeedback.findOneAndUpdate(
+      { messageId },
+      { messageId, sessionId, rating, assistantText },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

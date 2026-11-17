@@ -7,18 +7,35 @@ export const env = {
   mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || process.env.mongodb || 'mongodb://127.0.0.1:27017/roar_extreme',
   clientUrl: process.env.CLIENT_URL || 'https://roarextreme.vercel.app',
   jwtSecret: process.env.JWT_SECRET || 'dev_jwt_secret_change_in_production',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h', // 8-hour maximum lifetime
   aiProvider: process.env.AI_PROVIDER || 'gemini',
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.Gemini || process.env.gemini || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+  geminiModel: process.env.GEMINI_MODEL || process.env.AI_MODEL || 'gemini-3.5-flash-lite',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
-  aiModel: process.env.AI_MODEL || 'gemini-3.5-flash-lite',
+  openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
   resendApiKey: process.env.RESEND_API_KEY || '',
   fromEmail: process.env.FROM_EMAIL || 'noreply@roarextreme.com',
   gymNotificationEmail: process.env.GYM_NOTIFICATION_EMAIL || 'admin@roarextreme.com',
   memoryEnabled: process.env.MEMORY_ENABLED === 'true',
   chatHistoryRetentionDays: parseInt(process.env.CHAT_HISTORY_RETENTION_DAYS || '30', 10),
   memoryRetentionDays: parseInt(process.env.MEMORY_RETENTION_DAYS || '180', 10),
+
+  // Biometric & Access Control Configuration
+  faceEncryptionKey: process.env.FACE_ENCRYPTION_KEY || 'roar_biometric_aes256_secret_key_32bytes!', // 32 bytes for AES-256-GCM
+  faceMatchThreshold: parseFloat(process.env.FACE_MATCH_THRESHOLD || '0.48'),
+  ambiguityMargin: parseFloat(process.env.AMBIGUITY_MARGIN || '0.08'),
+  deviceApiKey: process.env.DEVICE_API_KEY || 'roar_kiosk_device_key_nashik_rooftop_01',
+  attendanceCooldownMinutes: parseInt(process.env.ATTENDANCE_COOLDOWN_MINUTES || '5', 10),
+  gracePeriodDays: parseInt(process.env.GRACE_PERIOD_DAYS || '0', 10),
+
+  // Phase 2 Hardware & Lock IoT Transport
+  mqttBrokerUrl: process.env.MQTT_BROKER_URL || '', // e.g. mqtts://broker.hivemq.com:8883
+  mqttUsername: process.env.MQTT_USERNAME || '',
+  mqttPassword: process.env.MQTT_PASSWORD || '',
+  doorCommandExpiryMs: parseInt(process.env.DOOR_COMMAND_EXPIRY_MS || '5000', 10),
+  deviceHeartbeatTimeoutMs: parseInt(process.env.DEVICE_HEARTBEAT_TIMEOUT_MS || '45000', 10),
+  kioskLockoutDenialThreshold: parseInt(process.env.KIOSK_LOCKOUT_DENIAL_THRESHOLD || '5', 10),
+  kioskLockoutDurationMs: parseInt(process.env.KIOSK_LOCKOUT_DURATION_MS || '180000', 10), // 3 min lockout
 };
 
 export function validateEnvironment(logger) {
@@ -38,6 +55,9 @@ export function validateEnvironment(logger) {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production') {
       warnings.push('JWT_SECRET is using a development fallback. Please set a dedicated production JWT secret.');
     }
+    if (!process.env.FACE_ENCRYPTION_KEY) {
+      warnings.push('FACE_ENCRYPTION_KEY is unset! Ensure a 32-byte production key is set before saving face biometric templates.');
+    }
     const hasGemini = Boolean(process.env.GEMINI_API_KEY || process.env.Gemini || process.env.gemini);
     if (!hasGemini) {
       warnings.push('GEMINI_API_KEY is not configured. AI chatbot will operate using grounded local fallback.');
@@ -55,4 +75,3 @@ export function validateEnvironment(logger) {
 
   return { isValid: missing.length === 0, missing, warnings };
 }
-
