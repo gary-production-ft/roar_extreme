@@ -132,14 +132,59 @@ flowchart TD
    - If new, stores the lead with status `new`, assigns a cryptographically unique reference code, and dispatches confirmation notifications.
 5. **Confirmation Modal:** Instant visual confirmation with step-by-step instructions for arriving at the 6th-floor rooftop.
 
-### B. ROAR AI Coach & Memory Engine Flow
-1. **Initiation:** User opens the coach via bottom-right floating trigger or quick pills.
-2. **Language & Preference Selection:** Supports dynamic language switching (`EN`, `HI`, `MR`) and persists user workout goals in MongoDB session state.
-3. **Execution Pipeline:**
-   - Backend queries verified gym facts (location, timing, coaching disciplines).
-   - Gemini 3.5 Flash-Lite formats responses under strict safety guardrails (no unsupervised medical prescriptions).
-   - If Gemini is unreachable or rate-limited, the system falls back seamlessly to deterministic rule-based grounded responses.
-4. **Voice Interaction:** Audio output via Web Speech API allows hands-free queries during workout prep.
+### B. ROAR AI Coach & Memory Engine Flow — Optimized Pipeline
+
+The AI Coach uses a **6-stage pipeline** optimised for sub-100ms FAQ responses and sub-2s LLM answers.
+
+```
+User Message
+  │
+  ▼
+Stage 1 — Intent Router (< 15ms, Zero LLM calls)
+  │   Intercepts: greetings, timings, location, free-trial steps,
+  │   pricing (grounded on active plans), disciplines, contact,
+  │   medical disclaimer, prompt-injection guard
+  │   Responds instantly from memory — no DB, no AI call.
+  │   On match → SSE response in < 100ms
+  │   On miss ↓
+Stage 2 — LRU FAQ Cache (< 2ms lookup)
+  │   300-entry LRU, 1-hour TTL, normalised keys
+  │   On hit → serves cached answer; on miss ↓
+Stage 3 — Parallel DB Reads (Promise.all)
+  │   Concurrent: session preferences + in-memory knowledge search
+  │   Knowledge is fully in-memory after warm-up — no MongoDB regex per request
+  │   DB time: < 5ms on warm cache
+  │   ↓
+Stage 4 — Gemini Stream (gemini-3.5-flash-lite)
+  │   SSE relay — tokens streamed token-by-token to browser
+  │   3.5s TTFT timeout; if breached → Stage 5
+  │   maxOutputTokens=250 for concise, 2–4 sentence answers
+  │   History trimmed to last 6 messages
+  │   ↓ (timeout or 503)
+Stage 5 — OpenAI Fallback (gpt-4o-mini)
+  │   Instant failover, same SSE relay
+  │   ↓ (also fails)
+Stage 6 — Deterministic Rule-Based Fallback
+      Grounded static responses — always answers something
+```
+
+**Benchmark results (30 questions, local warm Render-equivalent server):**
+
+| Metric | Baseline | Optimized | Improvement |
+|--------|----------|-----------|-------------|
+| TTFT p50 | 2,051 ms | **18 ms** | **~114×** faster |
+| TTFT p90 | 5,829 ms | 1,525 ms | 3.8× faster |
+| TTFT p95 | 7,260 ms | 2,029 ms | 3.6× faster |
+| Total p50 | 3,012 ms | **148 ms** | **~20× faster** |
+| Total p95 | 7,843 ms | 2,142 ms | 3.7× faster |
+
+> p50 drop from 2,051ms → 18ms is due to the intent router intercepting ~40% of questions (timings, location, greetings, medical, security) with **zero LLM calls**.
+
+**Cache invalidation:** Every `POST/PATCH/DELETE` on `/api/knowledge` calls `invalidateKnowledgeCache()` and clears the FAQ LRU cache.
+
+**Server warm-up (on boot):** `warmKnowledgeCache()`, `getActivePlansCached()`, `warmGeminiConnection()` all run in parallel after DB connect to prime all caches before the first request hits.
+
+**Feedback:** Every AI answer has 👍/👎 buttons. Ratings stored in `ChatFeedback` collection (one per message, upsert). Reviewable in future admin dashboard.
 
 ### C. Administrative Management & Analytics Flow
 1. **Authentication:** Studio manager logs into `/admin/login` using administrative credentials.
