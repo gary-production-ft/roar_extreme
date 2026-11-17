@@ -29,6 +29,9 @@ import fitnessPlanRoutes from './routes/fitnessPlanRoutes.js';
 
 export const app = express();
 
+// Trust reverse proxy (Render, Vercel, Cloudflare, AWS ALB) for accurate client IP rate limiting
+app.set('trust proxy', 1);
+
 // Security Headers & Content Security Policy (OWASP ASVS Compliant)
 app.use(
   helmet({

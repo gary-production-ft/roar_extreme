@@ -27,8 +27,8 @@ export function requestTelemetry(req, res, next) {
       durationMs,
     });
 
-    // Skip verbose logging on frequent health checks in production
-    if (route.startsWith('/health') && res.statusCode === 200) {
+    // Skip verbose logging on frequent health checks or during silent load benchmark
+    if ((route.startsWith('/health') || process.env.SILENT_TELEMETRY === 'true') && res.statusCode === 200) {
       return;
     }
 
