@@ -10,6 +10,7 @@ import { env } from './config/environment.js';
 import { lastDbError } from './config/database.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { sanitizeInputs } from './middleware/sanitize.js';
 
 import leadRoutes from './routes/leadRoutes.js';
 import authRoutes from './routes/authRoutes.js';
@@ -26,13 +27,44 @@ import fitnessPlanRoutes from './routes/fitnessPlanRoutes.js';
 
 export const app = express();
 
-// Security Headers
+// Security Headers & Content Security Policy (OWASP ASVS Compliant)
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
+        mediaSrc: ["'self'", 'blob:', 'data:'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   })
 );
+
+// Feature & Permissions Policy Header (Allows Camera for /kiosk biometric scanning, blocks audio/geo)
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(self), microphone=(), geolocation=(), payment=()'
+  );
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 
 // Hardened Production CORS Configuration
 const explicitAllowedOrigins = new Set([
@@ -71,6 +103,9 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+
+// NoSQL Injection, Prototype Pollution & Input Sanitization
+app.use(sanitizeInputs);
 
 // Global Rate Limiter
 app.use('/api', globalLimiter);

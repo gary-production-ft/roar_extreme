@@ -3,6 +3,7 @@ import { generateBookingReference } from '../utils/generateReference.js';
 import { sendConfirmationEmail, sendAdminNotification } from './emailService.js';
 import { logger } from '../utils/logger.js';
 import { AuditLog } from '../models/AuditLog.js';
+import { escapeRegex } from '../middleware/sanitize.js';
 
 export async function createLead(data, ipAddress = '') {
   // Normalize phone number (digits only, last 10 digits)
@@ -96,11 +97,12 @@ export async function getLeads({ page = 1, limit = 20, status, search, goal }) {
   }
 
   if (search) {
+    const safeRegex = escapeRegex(search.trim());
     query.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { bookingReference: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: safeRegex, $options: 'i' } },
+      { phone: { $regex: safeRegex, $options: 'i' } },
+      { email: { $regex: safeRegex, $options: 'i' } },
+      { bookingReference: { $regex: safeRegex, $options: 'i' } },
     ];
   }
 

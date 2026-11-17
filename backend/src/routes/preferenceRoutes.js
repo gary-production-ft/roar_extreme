@@ -13,6 +13,7 @@ const router = Router();
 router.get('/', getUserPreferences);
 router.post('/', validate(savePreferenceSchema), storePreference);
 router.delete('/:key', removePreference);
+router.delete('/', clearPreferences);
 router.post('/clear', clearPreferences);
 
 export default router;

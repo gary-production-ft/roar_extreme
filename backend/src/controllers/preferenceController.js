@@ -51,7 +51,7 @@ export async function storePreference(req, res, next) {
 export async function removePreference(req, res, next) {
   try {
     const { key } = req.params;
-    const { sessionId } = req.body;
+    const sessionId = req.query.sessionId || req.body?.sessionId;
 
     if (!sessionId) {
       return res.status(400).json({ success: false, message: 'sessionId is required' });
@@ -69,7 +69,7 @@ export async function removePreference(req, res, next) {
 
 export async function clearPreferences(req, res, next) {
   try {
-    const { sessionId } = req.body;
+    const sessionId = req.query.sessionId || req.body?.sessionId;
     if (!sessionId) {
       return res.status(400).json({ success: false, message: 'sessionId is required' });
     }

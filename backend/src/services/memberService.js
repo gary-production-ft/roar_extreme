@@ -5,6 +5,7 @@ import { Payment } from '../models/Payment.js';
 import { FaceTemplate } from '../models/FaceTemplate.js';
 import { encryptDescriptor } from '../utils/faceCrypto.js';
 import { logAdminAudit } from '../utils/auditLogger.js';
+import { escapeRegex } from '../middleware/sanitize.js';
 
 export function generateMemberId() {
   const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -31,10 +32,11 @@ export async function getMembersList({
   const query = {};
 
   if (search) {
+    const safeRegex = escapeRegex(search.trim());
     query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } },
-      { memberId: { $regex: search, $options: 'i' } },
+      { name: { $regex: safeRegex, $options: 'i' } },
+      { phone: { $regex: safeRegex, $options: 'i' } },
+      { memberId: { $regex: safeRegex, $options: 'i' } },
     ];
   }
 
