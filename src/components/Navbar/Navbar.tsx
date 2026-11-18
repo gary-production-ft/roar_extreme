@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowUpRight, Lock } from 'lucide-react';
+import { Menu, X, ArrowUpRight, Lock, Sparkles } from 'lucide-react';
 import { AnimatedButton } from '../AnimatedButton/AnimatedButton';
 import roarLogoImg from '../../assets/roar/branding/roar-logo.jpg';
+import { FitnessPlanModal } from '../FitnessPlan/FitnessPlanModal';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -95,6 +97,15 @@ export const Navbar: React.FC = () => {
 
           {/* Right CTA */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsPlanModalOpen(true)}
+              title="Personalized Workout & Diet Plan Generator"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#FF5A1F] text-white hover:text-black border border-[#FF5A1F]/50 transition-all duration-300 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#FF5A1F] group-hover:text-black" />
+              <span>Custom Plan</span>
+            </button>
             <Link
               to="/admin/login"
               title="Staff & Admin Portal"
@@ -167,6 +178,20 @@ export const Navbar: React.FC = () => {
             </div>
 
             <div className="pt-6 border-t border-white/10 flex flex-col gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsPlanModalOpen(true);
+                }}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#1c1410] to-[#121212] border border-[#FF5A1F]/50 text-white flex items-center justify-between text-xs font-heading font-black uppercase tracking-wider cursor-pointer shadow-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#FF5A1F]" />
+                  <span>Custom Workout & Diet Plan</span>
+                </div>
+                <span className="text-[10px] text-[#FF5A1F] font-mono">Free</span>
+              </button>
               <AnimatedButton
                 to="/register"
                 variant="primary"
@@ -190,6 +215,12 @@ export const Navbar: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Global Personalized Fitness & Diet Plan Modal */}
+      <FitnessPlanModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+      />
     </>
   );
 };

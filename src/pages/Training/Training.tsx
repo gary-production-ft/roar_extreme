@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, ArrowRight, Info } from 'lucide-react';
+import { Clock, ArrowRight, Info, Sparkles } from 'lucide-react';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { AnimatedButton } from '../../components/AnimatedButton/AnimatedButton';
 import { roarServices } from '../../config/services';
 import { businessConfig } from '../../config/business';
+import { FitnessPlanModal } from '../../components/FitnessPlan/FitnessPlanModal';
 
 export const Training: React.FC = () => {
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const slots = [
     { name: 'Morning Sessions', time: '6:00 AM – 10:30 AM', desc: 'Peak metabolic activation and early sunrise rooftop atmosphere' },
     { name: 'Afternoon Sessions', time: '11:00 AM – 4:00 PM', desc: 'Low density, high focus, dedicated floor trainer guidance' },
@@ -38,6 +40,31 @@ export const Training: React.FC = () => {
           <span>
             Training categories verified from official business directories (Magicpin). Specific batch timings for group classes (Zumba, CrossFit, Kickboxing) confirmed upon gym enrollment.
           </span>
+        </div>
+      </section>
+
+      {/* Personalized AI Plan Interactive Banner */}
+      <section className="max-w-7xl mx-auto px-6 md:px-12 pt-8">
+        <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-[#18120e] via-[#121212] to-black border border-[#FF5A1F]/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xl">
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF5A1F]/20 text-[#FF5A1F] border border-[#FF5A1F]/30 text-[11px] font-mono uppercase tracking-wider font-bold">
+              <Sparkles className="w-3.5 h-3.5" /> Free Custom Routine Engine
+            </span>
+            <h3 className="text-xl md:text-2xl font-black font-['Anton',sans-serif] uppercase text-white tracking-wide">
+              Personalized Workout & Indian Diet Plan
+            </h3>
+            <p className="text-sm text-[#A0A0A0] max-w-xl leading-relaxed">
+              Generate a science-backed workout split and balanced meal plan calibrated to your age, weight, goal, and Indian vegetarian/non-vegetarian preferences in 60 seconds.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPlanModalOpen(true)}
+            className="px-6 py-3.5 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] text-black font-heading font-black text-xs uppercase tracking-wider transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-xl flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 fill-black" />
+            <span>Design My Free Plan</span>
+          </button>
         </div>
       </section>
 
@@ -152,6 +179,12 @@ export const Training: React.FC = () => {
           CLAIM FREE SINGLE-SESSION PASS <ArrowRight className="w-4 h-4 ml-2" />
         </AnimatedButton>
       </section>
+
+      {/* Interactive Personalized Fitness & Diet Plan Modal */}
+      <FitnessPlanModal
+        isOpen={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+      />
     </div>
   );
 };

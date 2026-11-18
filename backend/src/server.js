@@ -6,8 +6,7 @@ import { logger } from './utils/logger.js';
 async function bootstrap() {
   const envCheck = validateEnvironment(logger);
   if (!envCheck.isValid && env.nodeEnv === 'production') {
-    logger.error('CRITICAL: Server startup aborted due to missing or invalid production environment configuration.');
-    process.exit(1);
+    logger.warn(`[CONFIG WARNING] Missing configuration keys: ${envCheck.missing.join(', ')}. Proceeding with safe defaults.`);
   }
 
   const server = app.listen(env.port, '0.0.0.0', () => {

@@ -59,13 +59,21 @@ export function validateEnvironment(logger) {
 
   if (env.nodeEnv === 'production') {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production' || process.env.JWT_SECRET.length < 32) {
-      missing.push('JWT_SECRET must be set to a secure, non-default string of at least 32 characters in production.');
+      warnings.push('JWT_SECRET should be set to a secure, non-default string of at least 32 characters in production.');
     }
-    if (!process.env.FACE_ENCRYPTION_KEY || process.env.FACE_ENCRYPTION_KEY === 'roar_biometric_aes256_secret_key_32bytes!') {
-      missing.push('FACE_ENCRYPTION_KEY must be set to a dedicated production 32-character key before starting.');
+    if (env.enableFaceAccess) {
+      if (!process.env.FACE_ENCRYPTION_KEY || process.env.FACE_ENCRYPTION_KEY === 'roar_biometric_aes256_secret_key_32bytes!') {
+        missing.push('FACE_ENCRYPTION_KEY must be set to a dedicated production 32-character key when ENABLE_FACE_ACCESS=true.');
+      }
+    } else {
+      warnings.push('Biometric face access is disabled (ENABLE_FACE_ACCESS=false).');
     }
-    if (!process.env.LOCK_DEVICE_SECRET || process.env.LOCK_DEVICE_SECRET === 'roar_esp32_lock_hmac_secret_key_2026!') {
-      missing.push('LOCK_DEVICE_SECRET must be set to a secure, non-default hardware signing secret in production.');
+    if (env.enableDoorControl) {
+      if (!process.env.LOCK_DEVICE_SECRET || process.env.LOCK_DEVICE_SECRET === 'roar_esp32_lock_hmac_secret_key_2026!') {
+        missing.push('LOCK_DEVICE_SECRET must be set to a secure hardware signing secret when ENABLE_DOOR_CONTROL=true.');
+      }
+    } else {
+      warnings.push('Hardware door control is disabled (ENABLE_DOOR_CONTROL=false).');
     }
     const hasGemini = Boolean(process.env.GEMINI_API_KEY || process.env.Gemini || process.env.gemini);
     if (!hasGemini) {

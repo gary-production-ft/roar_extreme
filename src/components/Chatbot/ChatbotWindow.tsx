@@ -244,6 +244,8 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
   const handleActionClick = (action: string) => {
     if (action === 'open_plan_generator') {
       setIsPlanModalOpen(true);
+    } else if (action === 'open_voice_coach') {
+      setIsVoiceModalOpen(true);
     } else if (action === 'scroll_to_registration') {
       onClose();
       const el = document.getElementById('free-session');
@@ -303,7 +305,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
               type="button"
               onClick={() => setIsVoiceModalOpen(true)}
               title="Launch Live Voice Coach"
-              className="hidden sm:inline-flex h-7 px-2.5 items-center gap-1 rounded-lg bg-[#FF5A1F]/15 hover:bg-[#FF5A1F] text-[#FF5A1F] hover:text-black border border-[#FF5A1F]/30 transition-all text-[10.5px] font-bold uppercase tracking-wider cursor-pointer shadow-sm"
+              className="inline-flex h-7 px-2 sm:px-2.5 items-center gap-1 rounded-lg bg-[#FF5A1F] hover:bg-[#FF7545] text-black border border-[#FF5A1F] transition-all text-[10px] sm:text-[10.5px] font-bold uppercase tracking-wider cursor-pointer shadow-sm"
             >
               <Headphones className="w-3 h-3 shrink-0" />
               <span>Voice</span>
@@ -422,7 +424,11 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
         </div>
 
         {/* Quick Actions Drawer (Single horizontal scrollable row, never wraps into bulky stack) */}
-        <ChatbotQuickActions onSelect={(prompt) => handleSendMessage(prompt)} disabled={isStreaming} />
+        <ChatbotQuickActions
+          onSelect={(prompt) => handleSendMessage(prompt)}
+          onAction={handleActionClick}
+          disabled={isStreaming}
+        />
 
         {/* Medical & Knowledge Disclaimer */}
         <div className="px-3.5 py-1.5 bg-black/90 border-t border-white/5 text-[9.5px] text-white/50 flex items-center justify-between shrink-0 select-none">

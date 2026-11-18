@@ -2,11 +2,19 @@ import React from 'react';
 
 interface QuickActionsProps {
   onSelect: (prompt: string) => void;
+  onAction?: (action: string) => void;
   disabled?: boolean;
 }
 
-const QUICK_PROMPTS = [
-  { label: '🥗 Custom Diet & Workout Plan', prompt: 'I want a custom workout and diet plan for my fitness goal.' },
+interface QuickPromptItem {
+  label: string;
+  prompt?: string;
+  action?: 'open_plan_generator' | 'open_voice_coach' | 'scroll_to_registration' | 'scroll_to_location';
+}
+
+const QUICK_PROMPTS: QuickPromptItem[] = [
+  { label: '🎙️ Live Voice Coach', action: 'open_voice_coach' },
+  { label: '🥗 Custom Diet & Workout Plan', action: 'open_plan_generator' },
   { label: '🔥 Claim Free Pass', prompt: 'I want to claim a free single session pass. How does it work?' },
   { label: '📍 Rooftop Location', prompt: 'Where is Roar Extreme located in Nashik and what are the gym hours?' },
   { label: '🏋️ Workout Disciplines', prompt: 'What training programs and fitness disciplines do you offer at Roar Extreme?' },
@@ -15,7 +23,15 @@ const QUICK_PROMPTS = [
   { label: '💪 Intense Chest Day', prompt: 'Give me an intense chest workout routine for today.' },
 ];
 
-export const ChatbotQuickActions: React.FC<QuickActionsProps> = ({ onSelect, disabled }) => {
+export const ChatbotQuickActions: React.FC<QuickActionsProps> = ({ onSelect, onAction, disabled }) => {
+  const handleClick = (item: QuickPromptItem) => {
+    if (item.action && onAction) {
+      onAction(item.action);
+    } else if (item.prompt) {
+      onSelect(item.prompt);
+    }
+  };
+
   return (
     <div
       data-lenis-prevent
@@ -26,8 +42,14 @@ export const ChatbotQuickActions: React.FC<QuickActionsProps> = ({ onSelect, dis
           key={index}
           type="button"
           disabled={disabled}
-          onClick={() => onSelect(item.prompt)}
-          className="text-[10.5px] font-sans font-bold tracking-wider uppercase px-3 py-1.5 rounded-full bg-[#1c1c1c] hover:bg-[#FF5A1F] text-white/80 hover:text-black border border-white/10 hover:border-[#FF5A1F] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 shadow-sm"
+          onClick={() => handleClick(item)}
+          className={`text-[10.5px] font-sans font-bold tracking-wider uppercase px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 shadow-sm ${
+            item.action === 'open_voice_coach'
+              ? 'bg-[#FF5A1F] text-black hover:bg-[#FF7545] border border-[#FF5A1F]'
+              : item.action === 'open_plan_generator'
+              ? 'bg-[#1c1c1c] text-[#FF5A1F] border border-[#FF5A1F]/40 hover:bg-[#FF5A1F] hover:text-black'
+              : 'bg-[#1c1c1c] hover:bg-[#FF5A1F] text-white/80 hover:text-black border border-white/10 hover:border-[#FF5A1F]'
+          }`}
         >
           {item.label}
         </button>

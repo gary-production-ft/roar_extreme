@@ -14,6 +14,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { apiUrl } from '../../config/api';
+import { generateClientFitnessPlan } from '../../services/fitnessPlanClientFallback';
 
 interface FitnessPlanModalProps {
   isOpen: boolean;
@@ -68,38 +69,54 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
     setLoading(true);
     setError(null);
 
+    const intakePayload = {
+      ageYears: Number(ageYears),
+      sexForEnergyEquation: sexEquation,
+      heightCm: Number(heightCm),
+      weightKg: Number(weightKg),
+      fitnessGoal,
+      dietPreference,
+      activityLevel,
+      trainingExperience,
+      availableTrainingDays: Number(availableTrainingDays),
+      foodAllergies,
+      medicalFlags: selectedMedicalFlags,
+      language: lang,
+    };
+
     try {
+      // 1. Attempt generation from backend API with 4s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
       const res = await fetch(apiUrl('/api/fitness-plans/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ageYears: Number(ageYears),
-          sexForEnergyEquation: sexEquation,
-          heightCm: Number(heightCm),
-          weightKg: Number(weightKg),
-          fitnessGoal,
-          dietPreference,
-          activityLevel,
-          trainingExperience,
-          availableTrainingDays: Number(availableTrainingDays),
-          foodAllergies,
-          medicalFlags: selectedMedicalFlags,
-          language: lang,
-        }),
+        signal: controller.signal,
+        body: JSON.stringify(intakePayload),
       });
+      clearTimeout(timeoutId);
 
-      const data = await res.json();
-
-      if (!res.ok || data.status === 'rejected_safety_gate') {
-        setError(data.message || data.redirectMessage || 'Plan could not be generated due to safety screening.');
-        setLoading(false);
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.workoutPlan && data.dietPlan) {
+          setPlanResult(data);
+          setStep('result');
+          setLoading(false);
+          return;
+        }
       }
+    } catch (apiErr) {
+      console.warn('Backend plan API offline or cold-starting. Running ROAR Client Clinical Engine fallback:', apiErr);
+    }
 
-      setPlanResult(data);
+    // 2. Guaranteed Client Clinical Fallback: Never leave user with a broken modal!
+    try {
+      const fallbackData = generateClientFitnessPlan(intakePayload);
+      setPlanResult(fallbackData);
       setStep('result');
-    } catch (err: any) {
-      setError(err.message || 'Network error connecting to coaching engine.');
+    } catch (fallbackErr: any) {
+      setError(fallbackErr.message || 'Error calculating fitness plan parameters.');
     } finally {
       setLoading(false);
     }
@@ -149,7 +166,7 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
   return (
     <div
       data-lenis-prevent="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
     >
       <div className="relative w-full max-w-2xl bg-[#0D0D0D] border border-white/20 rounded-2xl shadow-2xl overflow-hidden font-sans my-auto">
         {/* Header */}

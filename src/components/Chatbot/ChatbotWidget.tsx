@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { X, Dumbbell } from 'lucide-react';
+import { X, Dumbbell, Headphones } from 'lucide-react';
 import { ChatbotWindow } from './ChatbotWindow.tsx';
+import { VoiceCoachModal } from './VoiceCoachModal.tsx';
 
 export const ChatbotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVoiceDirectOpen, setIsVoiceDirectOpen] = useState(false);
+  const [voiceLang, setVoiceLang] = useState<'en' | 'hi' | 'mr'>('en');
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const toggleOpen = () => {
@@ -16,11 +19,39 @@ export const ChatbotWidget: React.FC = () => {
       {/* Chat Window */}
       <ChatbotWindow isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
-      {/* Launcher Button */}
-      <div className="relative group">
+      {/* Direct Voice Coach Modal (Android / Mobile & Desktop) */}
+      <VoiceCoachModal
+        isOpen={isVoiceDirectOpen}
+        onClose={() => setIsVoiceDirectOpen(false)}
+        language={voiceLang}
+        onLanguageChange={setVoiceLang}
+      />
+
+      {/* Launcher Group */}
+      <div className="relative flex items-center gap-2.5">
         {/* Pulsing glow ring when unread / not interacted */}
         {!hasInteracted && !isOpen && (
-          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#FF5A1F] to-[#FF7545] opacity-75 blur-sm animate-pulse" />
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#FF5A1F] to-[#FF7545] opacity-75 blur-sm animate-pulse pointer-events-none" />
+        )}
+
+        {/* Dedicated 1-Tap Live Voice Coach Button */}
+        {!isOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsVoiceDirectOpen(true);
+              if (!hasInteracted) setHasInteracted(true);
+            }}
+            aria-label="Speak with ROAR Voice Coach"
+            title="Launch Live Voice Coach"
+            className="relative flex items-center justify-center w-12 h-12 rounded-full bg-[#FF5A1F] hover:bg-[#FF7545] text-black shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer border-2 border-black"
+          >
+            <Headphones className="w-5 h-5 fill-current" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+          </button>
         )}
 
         <button
@@ -52,7 +83,7 @@ export const ChatbotWidget: React.FC = () => {
         {!hasInteracted && !isOpen && (
           <div className="hidden sm:flex absolute bottom-full right-0 mb-3 w-56 p-2.5 rounded-xl bg-[#141414] border border-[#FF5A1F]/40 shadow-xl text-left pointer-events-none animate-bounce">
             <p className="text-[11px] text-white/90 leading-tight">
-              ⚡ <strong className="text-[#FF5A1F]">Got questions?</strong> Ask our AI Coach about the rooftop gym, programs & free trials!
+              ⚡ <strong className="text-[#FF5A1F]">Got questions?</strong> Talk to our Voice Coach or chat about rooftop training & free passes!
             </p>
           </div>
         )}
