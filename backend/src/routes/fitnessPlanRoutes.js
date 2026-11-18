@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { env } from '../config/environment.js';
 import {
   createFitnessPlan,
   getFitnessPlan,
@@ -12,6 +13,17 @@ import { validate } from '../middleware/validate.js';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+// Kill-switch middleware
+router.use((req, res, next) => {
+  if (!env.enablePlanEngine) {
+    return res.status(503).json({
+      success: false,
+      message: 'Fitness plan generation is temporarily disabled for maintenance.',
+    });
+  }
+  next();
+});
 
 // Dedicated rate limiter: 10 plan generations per 15 minutes per IP
 const planGenLimiter = rateLimit({

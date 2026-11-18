@@ -36,6 +36,12 @@ export const env = {
   deviceHeartbeatTimeoutMs: parseInt(process.env.DEVICE_HEARTBEAT_TIMEOUT_MS || '45000', 10),
   kioskLockoutDenialThreshold: parseInt(process.env.KIOSK_LOCKOUT_DENIAL_THRESHOLD || '5', 10),
   kioskLockoutDurationMs: parseInt(process.env.KIOSK_LOCKOUT_DURATION_MS || '180000', 10), // 3 min lockout
+
+  // Operational Feature Flags & Kill-Switches (Default OFF in production until verified)
+  enableDoorControl: process.env.ENABLE_DOOR_CONTROL === 'true' || (process.env.NODE_ENV !== 'production' && process.env.ENABLE_DOOR_CONTROL !== 'false'),
+  enableFaceAccess: process.env.ENABLE_FACE_ACCESS === 'true' || (process.env.NODE_ENV !== 'production' && process.env.ENABLE_FACE_ACCESS !== 'false'),
+  enableChatbot: process.env.ENABLE_CHATBOT !== 'false',
+  enablePlanEngine: process.env.ENABLE_PLAN_ENGINE !== 'false',
 };
 
 export function validateEnvironment(logger) {
@@ -52,11 +58,14 @@ export function validateEnvironment(logger) {
   }
 
   if (env.nodeEnv === 'production') {
-    if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production') {
-      warnings.push('JWT_SECRET is using a development fallback. Please set a dedicated production JWT secret.');
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production' || process.env.JWT_SECRET.length < 32) {
+      missing.push('JWT_SECRET must be set to a secure, non-default string of at least 32 characters in production.');
     }
-    if (!process.env.FACE_ENCRYPTION_KEY) {
-      warnings.push('FACE_ENCRYPTION_KEY is unset! Ensure a 32-byte production key is set before saving face biometric templates.');
+    if (!process.env.FACE_ENCRYPTION_KEY || process.env.FACE_ENCRYPTION_KEY === 'roar_biometric_aes256_secret_key_32bytes!') {
+      missing.push('FACE_ENCRYPTION_KEY must be set to a dedicated production 32-character key before starting.');
+    }
+    if (!process.env.LOCK_DEVICE_SECRET || process.env.LOCK_DEVICE_SECRET === 'roar_esp32_lock_hmac_secret_key_2026!') {
+      missing.push('LOCK_DEVICE_SECRET must be set to a secure, non-default hardware signing secret in production.');
     }
     const hasGemini = Boolean(process.env.GEMINI_API_KEY || process.env.Gemini || process.env.gemini);
     if (!hasGemini) {

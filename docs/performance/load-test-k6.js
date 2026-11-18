@@ -57,7 +57,7 @@ export default function () {
     'chat status is 200': (r) => r.status === 200,
   }) || errorRate.add(1);
 
-  // Scenario 4: Door Access Bulkhead Verification (20% of traffic)
+  // Scenario 4: Door Access Bulkhead Verification (15% of traffic)
   const startDoor = Date.now();
   const doorPayload = JSON.stringify({
     descriptor: new Array(128).fill(0.05),
@@ -69,6 +69,21 @@ export default function () {
   check(doorRes, {
     'door response status is 200 or 404': (r) => r.status === 200 || r.status === 404,
   }) || errorRate.add(1);
+
+  // Scenario 5: Visitor Free Trial Booking (5% of traffic)
+  if (__ITER % 20 === 0) {
+    const leadPayload = JSON.stringify({
+      fullName: `Visitor ${__VU}_${__ITER}`,
+      phone: `98${String(10000000 + (__VU * 1000) + __ITER).slice(0, 8)}`,
+      email: `lead_${__VU}_${__ITER}@example.com`,
+      preferredTime: 'morning',
+      fitnessGoal: 'fat_loss',
+    });
+    const leadRes = http.post(`${TARGET_URL}/api/leads`, leadPayload, { headers });
+    check(leadRes, {
+      'lead status is 201 or 200': (r) => r.status === 201 || r.status === 200,
+    }) || errorRate.add(1);
+  }
 
   sleep(1);
 }

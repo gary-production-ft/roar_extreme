@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { env } from '../config/environment.js';
 import {
   createOrResumeSession,
   sendMessage,
@@ -16,6 +17,17 @@ import { validate } from '../middleware/validate.js';
 import { chatLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
+
+// Kill-switch middleware
+router.use((req, res, next) => {
+  if (!env.enableChatbot) {
+    return res.status(503).json({
+      success: false,
+      message: 'Chatbot service is temporarily disabled for maintenance.',
+    });
+  }
+  next();
+});
 
 router.post('/session', validate(sessionSchema), createOrResumeSession);
 router.post('/message', chatLimiter, validate(messageSchema), sendMessage);

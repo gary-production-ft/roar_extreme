@@ -4,7 +4,11 @@ import { connectDatabase } from './config/database.js';
 import { logger } from './utils/logger.js';
 
 async function bootstrap() {
-  validateEnvironment(logger);
+  const envCheck = validateEnvironment(logger);
+  if (!envCheck.isValid && env.nodeEnv === 'production') {
+    logger.error('CRITICAL: Server startup aborted due to missing or invalid production environment configuration.');
+    process.exit(1);
+  }
 
   const server = app.listen(env.port, '0.0.0.0', () => {
     logger.info(`ROAR EXTREME Backend running on port ${env.port} [${env.nodeEnv}]`);

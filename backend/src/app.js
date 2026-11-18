@@ -44,6 +44,7 @@ app.use(
         imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
         connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
         mediaSrc: ["'self'", 'blob:', 'data:'],
+        frameSrc: ["'self'", 'https://www.google.com', 'https://maps.google.com'],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
