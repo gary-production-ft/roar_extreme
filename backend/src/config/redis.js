@@ -13,11 +13,20 @@ import { logger } from '../utils/logger.js';
 let redisClient = null;
 let isConnected = false;
 
-const redisUrl = process.env.REDIS_URL || process.env.REDIS_TLS_URL || '';
+let resolvedRedisUrl = process.env.REDIS_URL || process.env.REDIS_TLS_URL || '';
 
-if (redisUrl && redisUrl !== 'memory' && redisUrl !== 'disabled') {
+if (!resolvedRedisUrl && process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   try {
-    redisClient = new Redis(redisUrl, {
+    const host = new URL(process.env.UPSTASH_REDIS_REST_URL).hostname;
+    resolvedRedisUrl = `rediss://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${host}:6379`;
+  } catch (err) {
+    logger.warn(`[REDIS] Failed to resolve UPSTASH_REDIS_REST_URL: ${err.message}`);
+  }
+}
+
+if (resolvedRedisUrl && resolvedRedisUrl !== 'memory' && resolvedRedisUrl !== 'disabled') {
+  try {
+    redisClient = new Redis(resolvedRedisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
       lazyConnect: true,
