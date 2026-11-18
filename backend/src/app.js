@@ -90,7 +90,11 @@ const corsOptions = {
     }
 
     const normalizedOrigin = origin.replace(/\/$/, '');
-    if (explicitAllowedOrigins.has(normalizedOrigin)) {
+    if (
+      explicitAllowedOrigins.has(normalizedOrigin) ||
+      normalizedOrigin.endsWith('.onrender.com') ||
+      normalizedOrigin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
 
