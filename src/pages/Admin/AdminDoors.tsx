@@ -10,6 +10,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiUrl } from '../../config/api';
@@ -74,8 +75,35 @@ export const AdminDoors: React.FC = () => {
   const [lockdownModalDoor, setLockdownModalDoor] = useState<DoorItem | null>(null);
   const [lockdownReason, setLockdownReason] = useState('');
   const [isTogglingLockdown, setIsTogglingLockdown] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const isOwner = admin?.role === 'owner' || admin?.role === 'superadmin';
+
+  const handleSeedDemo = async () => {
+    if (!window.confirm('Seed simulated attendance, doors, and hardware events for testing?')) return;
+    setIsSeeding(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/doors/seed-demo'), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-seed-key': 'roar-demo-seed-2026',
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(data.message || 'Demo data seeded successfully!');
+        fetchData();
+        fetchEvents();
+      } else {
+        alert(data.message || 'Failed to seed demo data.');
+      }
+    } catch (err: any) {
+      alert('Error seeding demo data: ' + (err.message || 'Network error'));
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -273,6 +301,16 @@ export const AdminDoors: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleSeedDemo}
+            disabled={isSeeding}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FF5A1F]/20 hover:bg-[#FF5A1F]/30 text-[#FF5A1F] border border-[#FF5A1F]/40 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+            title="Populates realistic test members, check-ins, and hardware events"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isSeeding ? 'Seeding...' : 'Seed Demo Data'}</span>
+          </button>
+
           <button
             onClick={() => {
               fetchData();

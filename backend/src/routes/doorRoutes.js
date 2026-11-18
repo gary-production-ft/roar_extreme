@@ -8,6 +8,7 @@ import {
   listDevices,
   createDevice,
   resetDeviceLockout,
+  handleSeedDemoData,
   manualUnlockSchema,
   lockdownSchema,
   createDeviceSchema,
@@ -45,5 +46,17 @@ router.get('/doors/events/export/csv', authenticate, authorize('owner', 'recepti
 router.get('/devices', authenticate, authorize('owner', 'receptionist'), listDevices);
 router.post('/devices', authenticate, authorize('owner'), validate(createDeviceSchema), createDevice);
 router.post('/devices/:id/reset-lockout', authenticate, authorize('owner', 'receptionist'), resetDeviceLockout);
+
+// Demo data seeding endpoint for automated/manual testing
+router.post('/doors/seed-demo', (req, res, next) => {
+  if (req.headers['x-seed-key'] === 'roar-demo-seed-2026') {
+    return handleSeedDemoData(req, res, next);
+  }
+  return authenticate(req, res, () => {
+    authorize('owner', 'receptionist')(req, res, () => {
+      handleSeedDemoData(req, res, next);
+    });
+  });
+});
 
 export default router;

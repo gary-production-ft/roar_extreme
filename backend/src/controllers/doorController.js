@@ -195,3 +195,16 @@ export async function resetDeviceLockout(req, res, next) {
     next(err);
   }
 }
+
+export async function handleSeedDemoData(req, res, next) {
+  try {
+    const { seedAttendanceAndDoors } = await import('../scripts/seedAttendanceAndDoors.js');
+    await seedAttendanceAndDoors();
+    res.json({
+      success: true,
+      message: 'Successfully seeded demo attendance, doors, devices, members, and access logs into database.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
