@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   Wind,
-  UserCheck,
   Lock,
   BatteryCharging,
   Clock,
@@ -19,8 +18,6 @@ export const Amenities: React.FC = () => {
     switch (name) {
       case 'Wind':
         return <Wind className="w-5 h-5 text-[#FF5A1F]" />;
-      case 'UserCheck':
-        return <UserCheck className="w-5 h-5 text-[#FF5A1F]" />;
       case 'Lock':
         return <Lock className="w-5 h-5 text-[#FF5A1F]" />;
       case 'BatteryCharging':
@@ -106,6 +103,9 @@ export const Amenities: React.FC = () => {
                   <img
                     src={item.image}
                     alt={item.title}
+                    loading="lazy"
+                    width={item.width || 800}
+                    height={item.height || 600}
                     className="absolute inset-0 w-full h-full object-cover filter brightness-[0.4] group-hover:brightness-[0.55] group-hover:scale-105 transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
