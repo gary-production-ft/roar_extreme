@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Dumbbell, Headphones } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Dumbbell, Mic } from 'lucide-react';
 import { ChatbotWindow } from './ChatbotWindow.tsx';
 import { VoiceCoachModal } from './VoiceCoachModal.tsx';
 
@@ -9,13 +9,46 @@ export const ChatbotWidget: React.FC = () => {
   const [voiceLang, setVoiceLang] = useState<'en' | 'hi' | 'mr'>('en');
   const [hasInteracted, setHasInteracted] = useState(false);
 
+  // Tooltip dismissal state with persistent localStorage memory (D7)
+  const [tooltipDismissed, setTooltipDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('roar_coach_tooltip_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissTooltip = () => {
+    setTooltipDismissed(true);
+    try {
+      localStorage.setItem('roar_coach_tooltip_dismissed', 'true');
+    } catch {
+      // Safe fallback if localStorage is disabled in private browsing
+    }
+  };
+
+  // Auto-dismiss tooltip after 8 seconds (D7)
+  useEffect(() => {
+    if (tooltipDismissed || hasInteracted || isOpen) return;
+    const timer = setTimeout(() => {
+      dismissTooltip();
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [tooltipDismissed, hasInteracted, isOpen]);
+
   const toggleOpen = () => {
     setIsOpen(!isOpen);
     if (!hasInteracted) setHasInteracted(true);
+    if (!tooltipDismissed) dismissTooltip();
   };
 
   return (
-    <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-40">
+    <div
+      className="fixed right-4 sm:right-8 z-40 transition-all"
+      style={{
+        bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
+      }}
+    >
       {/* Chat Window */}
       <ChatbotWindow isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
@@ -34,26 +67,24 @@ export const ChatbotWidget: React.FC = () => {
           <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#FF5A1F] to-[#FF7545] opacity-75 blur-sm animate-pulse pointer-events-none" />
         )}
 
-        {/* Dedicated 1-Tap Live Voice Coach Button */}
+        {/* Dedicated 1-Tap Live Voice Coach Button with Mic Icon & Accessible Label (D6) */}
         {!isOpen && (
           <button
             type="button"
             onClick={() => {
               setIsVoiceDirectOpen(true);
               if (!hasInteracted) setHasInteracted(true);
+              if (!tooltipDismissed) dismissTooltip();
             }}
-            aria-label="Speak with ROAR Voice Coach"
-            title="Launch Live Voice Coach"
+            aria-label="Ask the Roar coach"
+            title="Ask the Roar coach via Voice"
             className="relative flex items-center justify-center w-12 h-12 rounded-full bg-[#FF5A1F] hover:bg-[#FF7545] text-black shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer border-2 border-black"
           >
-            <Headphones className="w-5 h-5 fill-current" />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-            </span>
+            <Mic className="w-5 h-5 fill-current" />
           </button>
         )}
 
+        {/* Text Chat Launcher */}
         <button
           type="button"
           onClick={toggleOpen}
@@ -79,12 +110,25 @@ export const ChatbotWidget: React.FC = () => {
           )}
         </button>
 
-        {/* First time prompt tooltip */}
-        {!hasInteracted && !isOpen && (
-          <div className="hidden sm:flex absolute bottom-full right-0 mb-3 w-56 p-2.5 rounded-xl bg-[#141414] border border-[#FF5A1F]/40 shadow-xl text-left pointer-events-none animate-bounce">
-            <p className="text-[11px] text-white/90 leading-tight">
-              ⚡ <strong className="text-[#FF5A1F]">Got questions?</strong> Talk to our Voice Coach or chat about rooftop training & free passes!
-            </p>
+        {/* Dismissible First-Time Prompt Tooltip (D7) */}
+        {!tooltipDismissed && !hasInteracted && !isOpen && (
+          <div
+            role="status"
+            className="absolute bottom-full right-0 mb-3 w-64 sm:w-72 p-3 rounded-xl bg-[#141414] border border-[#FF5A1F]/40 shadow-2xl text-left z-50 flex items-start justify-between gap-2"
+          >
+            <div className="flex-1 pr-1">
+              <p className="text-[11px] text-white/90 leading-snug">
+                ⚡ <strong className="text-[#FF5A1F]">Got questions?</strong> Ask the Roar coach via live voice or text about rooftop facilities & free passes!
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissTooltip}
+              aria-label="Dismiss tooltip"
+              className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </div>
