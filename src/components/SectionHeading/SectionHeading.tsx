@@ -35,7 +35,7 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
       <motion.h2
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-50px' }}
+        viewport={{ once: true, margin: '50px' }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-['Anton',sans-serif] tracking-tight uppercase text-white leading-none break-words"
       >

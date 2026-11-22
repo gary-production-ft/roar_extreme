@@ -56,7 +56,7 @@ export const Amenities: React.FC = () => {
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: '50px' }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 className={`bg-[#141414] border border-white/10 p-6 flex flex-col justify-between hover:border-[#FF5A1F]/50 transition-colors group ${
                   isLastSingleOnMd ? 'md:col-span-2 md:max-w-xl md:mx-auto w-full lg:max-w-none' : ''

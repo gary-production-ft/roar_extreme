@@ -4,18 +4,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const Preloader: React.FC = () => {
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !sessionStorage.getItem('roar_preloader_seen');
+    // D18: Respect prefers-reduced-motion immediately
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      return false;
+    }
+    try {
+      return !sessionStorage.getItem('roar_preloader_seen');
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
     if (!isLoading) return;
 
+    // D18: Fast branded flash (400ms max) that never gates first paint or interaction
     const timer = setTimeout(() => {
       setIsLoading(false);
-      sessionStorage.setItem('roar_preloader_seen', 'true');
-    }, 1800);
+      try {
+        sessionStorage.setItem('roar_preloader_seen', 'true');
+      } catch {
+        // Safe in private browsing mode
+      }
+    }, 400);
 
-    return () => clearTimeout(timer);
+    // Hard escape: any keydown or pointerdown dismisses immediately
+    const handleDismiss = () => setIsLoading(false);
+    window.addEventListener('keydown', handleDismiss, { once: true });
+    window.addEventListener('pointerdown', handleDismiss, { once: true });
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleDismiss);
+      window.removeEventListener('pointerdown', handleDismiss);
+    };
   }, [isLoading]);
 
   return (
@@ -25,18 +47,18 @@ export const Preloader: React.FC = () => {
           key="preloader"
           initial={{ opacity: 1 }}
           exit={{
-            y: '-100%',
-            transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] },
+            opacity: 0,
+            transition: { duration: 0.25, ease: 'easeOut' },
           }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#080808]"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#080808] pointer-events-none select-none"
         >
           <div className="relative flex flex-col items-center">
             {/* ROAR Wordmark Reveal */}
             <div className="overflow-hidden mb-4">
               <motion.h1
-                initial={{ y: 80, opacity: 0 }}
+                initial={{ y: 40, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 className="text-4xl xs:text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter text-white font-['Anton',sans-serif] text-center px-4"
               >
                 ROAR <span className="text-[#FF5A1F]">EXTREME</span>
@@ -45,9 +67,9 @@ export const Preloader: React.FC = () => {
 
             {/* Tagline Reveal */}
             <motion.p
-              initial={{ opacity: 0, letterSpacing: '0.1em' }}
-              animate={{ opacity: 0.8, letterSpacing: '0.3em' }}
-              transition={{ delay: 0.3, duration: 0.6 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.8 }}
+              transition={{ delay: 0.1, duration: 0.25 }}
               className="text-xs uppercase text-[#A0A0A0] font-semibold mb-6 tracking-widest"
             >
               NASHIK • UNLEASH YOUR INNER BEAST
@@ -60,7 +82,7 @@ export const Preloader: React.FC = () => {
                 animate={{ x: '100%' }}
                 transition={{
                   repeat: Infinity,
-                  duration: 1.2,
+                  duration: 0.8,
                   ease: 'easeInOut',
                 }}
                 className="w-full h-full bg-[#FF5A1F]"

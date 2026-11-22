@@ -38,7 +38,7 @@ export const Training: React.FC = () => {
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
+              viewport={{ once: true, margin: '50px' }}
               transition={{ duration: 0.5, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
               className="group relative bg-[#171717] border border-white/10 overflow-hidden flex flex-col justify-end min-h-[380px] hover:border-[#FF5A1F]/50 transition-colors"
             >
