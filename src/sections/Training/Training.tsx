@@ -18,7 +18,7 @@ export const Training: React.FC = () => {
           />
           <div className="mt-4 md:mt-0 max-w-md">
             <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed">
-              Eight verified training and fitness disciplines offered at Roar Fitness Nashik, equipped with authentic machinery and dedicated zones.
+              Six verified training and fitness disciplines offered at Roar Extreme Nashik, equipped with authentic machinery and dedicated zones.
             </p>
           </div>
         </div>
@@ -27,12 +27,12 @@ export const Training: React.FC = () => {
         <div className="mb-10 p-3.5 bg-black/60 border border-white/10 flex items-center gap-2.5 text-xs text-white/60">
           <Info className="w-4 h-4 text-[#FF5A1F] shrink-0" />
           <span>
-            Training categories verified from official business directories. Specific batch schedules for group classes (Zumba, CrossFit, Kickboxing) confirmed upon gym enrollment.
+            Training categories verified from official business directories. Specific batch schedules for group classes (Zumba, CrossFit) confirmed upon gym enrollment.
           </span>
         </div>
 
-        {/* 8 Category Asymmetrical Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 6 Category Balanced Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {roarServices.map((item, index) => (
             <motion.div
               key={item.id}
@@ -48,6 +48,8 @@ export const Training: React.FC = () => {
                   src={item.image}
                   alt={item.title}
                   loading="lazy"
+                  width={item.width || 800}
+                  height={item.height || 600}
                   className="w-full h-full object-cover object-center filter brightness-[0.4] group-hover:brightness-[0.55] group-hover:scale-105 transition-all duration-700 ease-out"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/75 to-transparent" />

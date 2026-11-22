@@ -181,11 +181,11 @@ export const roarGallery: GalleryPhoto[] = [
   },
   {
     id: 'gallery-06',
-    category: 'gym-interior',
-    title: 'Personal Training Consultation Corner',
-    caption: 'Dedicated assessment zone for body composition reviews and coach consultations',
+    category: 'strength',
+    title: 'Seated Leg Extension Station',
+    caption: 'Commercial selectorized leg extension and seated leg curl machine',
     image: gallery06Img,
-    width: 1200,
-    height: 800,
+    width: 800,
+    height: 1067,
   },
 ];

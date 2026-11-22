@@ -28,7 +28,7 @@ export const Training: React.FC = () => {
             <span className="text-[#FF5A1F]">TRAINING STYLE.</span>
           </h1>
           <p className="text-base md:text-xl text-[#A0A0A0] max-w-2xl leading-relaxed">
-            Eight verified training programs offered at {businessConfig.name} {businessConfig.city}, engineered to meet your individual fitness and athletic goals.
+            Six verified training programs offered at {businessConfig.name} {businessConfig.city}, engineered to meet your individual fitness and athletic goals.
           </p>
         </div>
       </section>
@@ -38,7 +38,7 @@ export const Training: React.FC = () => {
         <div className="p-4 bg-[#141414] border border-white/10 flex items-center gap-3 text-xs text-white/70">
           <Info className="w-5 h-5 text-[#FF5A1F] shrink-0" />
           <span>
-            Training categories verified from official business directories (Magicpin). Specific batch timings for group classes (Zumba, CrossFit, Kickboxing) confirmed upon gym enrollment.
+            Training categories verified from official business directories. Specific batch timings for group classes (Zumba, CrossFit) confirmed upon gym enrollment.
           </span>
         </div>
       </section>
@@ -68,9 +68,9 @@ export const Training: React.FC = () => {
         </div>
       </section>
 
-      {/* Programs Detailed List - All 8 Disciplines */}
+      {/* Programs Detailed List - Verified Disciplines */}
       <section className="py-16 md:py-24 max-w-7xl mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {roarServices.map((prog) => (
             <motion.div
               key={prog.id}
@@ -86,6 +86,8 @@ export const Training: React.FC = () => {
                   src={prog.image}
                   alt={prog.title}
                   loading="lazy"
+                  width={prog.width || 800}
+                  height={prog.height || 600}
                   className="w-full h-full object-cover filter brightness-[0.55] group-hover:brightness-[0.75] group-hover:scale-105 transition-all duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent" />
