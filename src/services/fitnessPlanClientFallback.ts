@@ -99,9 +99,15 @@ export function generateClientFitnessPlan(intake: IntakeData) {
     generationMethod: 'ROAR Deterministic Clinical Engine',
     targets: {
       dailyCalories,
+      targetCalories: dailyCalories,
       bmr,
       tdee,
       macros: {
+        protein: { grams: proteinG },
+        fat: { grams: fatsG },
+        fats: { grams: fatsG },
+        carbohydrates: { grams: carbsG },
+        carbs: { grams: carbsG },
         proteinG,
         carbsG,
         fatsG,
@@ -498,3 +504,5 @@ function buildDietPlan(
     ],
   };
 }
+
+export const generateClientFallbackPlan = generateClientFitnessPlan;

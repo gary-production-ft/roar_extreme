@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import { apiUrl } from '../../config/api';
 import { generateClientFitnessPlan } from '../../services/fitnessPlanClientFallback';
+import {
+  fitnessPlanResponseSchema,
+  type ValidatedFitnessPlan,
+} from '../../schemas/fitnessPlanResponseSchema';
+import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary';
 
 interface FitnessPlanModalProps {
   isOpen: boolean;
@@ -48,8 +53,12 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
   const [lang, setLang] = useState<'en' | 'hi' | 'mr'>(initialLang);
 
   // Result Plan
-  const [planResult, setPlanResult] = useState<any>(null);
+  const [planResult, setPlanResult] = useState<ValidatedFitnessPlan | null>(null);
   const [userRating, setUserRating] = useState<'up' | 'down' | null>(null);
+
+  // Cancellation & Double-Submit Refs
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // Trainer Review Form
   const [showTrainerModal, setShowTrainerModal] = useState(false);
@@ -64,8 +73,20 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = null;
+    isSubmittingRef.current = false;
+    setLoading(false);
+    setError('Plan calculation was cancelled.');
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return; // Double-submit guard
+    isSubmittingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -85,9 +106,10 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
     };
 
     try {
-      // 1. Attempt generation from backend API with 4s timeout
+      // 1. Attempt generation from backend API with 20s timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      abortControllerRef.current = controller;
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
       const res = await fetch(apiUrl('/api/fitness-plans/generate'), {
         method: 'POST',
@@ -99,26 +121,43 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
 
       if (res.ok) {
         const data = await res.json();
-        if (data && data.workoutPlan && data.dietPlan) {
-          setPlanResult(data);
+        const validation = fitnessPlanResponseSchema.safeParse(data);
+        if (validation.success) {
+          setPlanResult(validation.data);
           setStep('result');
           setLoading(false);
+          isSubmittingRef.current = false;
+          abortControllerRef.current = null;
           return;
+        } else {
+          console.warn('Backend plan response failed schema validation. Falling back to clinical engine.', validation.error);
         }
       }
-    } catch (apiErr) {
-      console.warn('Backend plan API offline or cold-starting. Running ROAR Client Clinical Engine fallback:', apiErr);
+    } catch (apiErr: any) {
+      if (apiErr.name === 'AbortError') {
+        console.warn('Backend plan API request timed out after 20s. Running client clinical engine.');
+      } else {
+        console.warn('Backend plan API offline. Running ROAR Client Clinical Engine fallback:', apiErr);
+      }
     }
 
     // 2. Guaranteed Client Clinical Fallback: Never leave user with a broken modal!
     try {
       const fallbackData = generateClientFitnessPlan(intakePayload);
-      setPlanResult(fallbackData);
-      setStep('result');
+      const parsedFallback = fitnessPlanResponseSchema.safeParse(fallbackData);
+      if (parsedFallback.success) {
+        setPlanResult(parsedFallback.data);
+        setStep('result');
+      } else {
+        setPlanResult(fallbackData as unknown as ValidatedFitnessPlan);
+        setStep('result');
+      }
     } catch (fallbackErr: any) {
       setError(fallbackErr.message || 'Error calculating fitness plan parameters.');
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
+      abortControllerRef.current = null;
     }
   };
 
@@ -195,15 +234,37 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
 
         {/* Body */}
         <div className="p-5 max-h-[75vh] overflow-y-auto overscroll-contain">
-          {error && (
-            <div className="mb-4 p-3.5 bg-red-950/40 border border-red-500/40 rounded-xl text-xs text-red-200 flex items-start gap-2.5">
-              <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-red-300">Safety & Screening Notice</p>
-                <p className="mt-0.5">{error}</p>
+          <ErrorBoundary
+            fallbackTitle="PLAN DESIGNER RECOVERY"
+            fallbackMessage="An unexpected error occurred while calculating your routine. Your inputs have been preserved. Click Retry below."
+            onReset={() => {
+              setStep('intake');
+              setLoading(false);
+              setError(null);
+            }}
+          >
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mb-4 p-3.5 bg-[#160C0C] border border-[#FF5A1F]/30 rounded-xl text-xs text-white flex items-start justify-between gap-2.5"
+              >
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="w-5 h-5 text-[#FF5A1F] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[#FF5A1F]">Safety & Calculation Notice</p>
+                    <p className="mt-0.5 text-[#A0A0A0]">{error}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="text-[10px] font-mono uppercase text-[#A0A0A0] hover:text-white underline cursor-pointer shrink-0"
+                >
+                  Dismiss
+                </button>
               </div>
-            </div>
-          )}
+            )}
 
           {step === 'intake' ? (
             <form onSubmit={handleGenerate} className="space-y-4 text-xs">
@@ -386,7 +447,7 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
                         onClick={() => toggleAllergy(al)}
                         className={`px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all cursor-pointer ${
                           foodAllergies.includes(al)
-                            ? 'bg-red-500 text-white border-red-500 font-bold'
+                            ? 'bg-[#FF5A1F] text-black border-[#FF5A1F] font-bold'
                             : 'bg-black/40 text-white/60 border-white/10 hover:border-white/30'
                         }`}
                       >
@@ -425,26 +486,38 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
                 </div>
               </div>
 
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] disabled:opacity-50 text-black font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    <span>Calculating Targets & Assembling Plan...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate My Custom Plan</span>
-                  </>
+              {/* Submit CTA & Cancellation */}
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-[#FF5A1F] hover:bg-[#FF7545] disabled:opacity-50 text-black font-heading font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <span>Calculating Targets & Assembling Plan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Generate My Custom Plan</span>
+                    </>
+                  )}
+                </button>
+
+                {loading && (
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="w-full py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-[11px] font-mono uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    Cancel Calculation
+                  </button>
                 )}
-              </button>
+              </div>
             </form>
-          ) : (
+          ) : planResult ? (
             /* Result Plan View */
             <div className="space-y-4">
               {/* Plan Header Card */}
@@ -452,27 +525,27 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono font-bold uppercase text-[#FF5A1F] bg-[#FF5A1F]/10 px-2 py-0.5 rounded border border-[#FF5A1F]/30">
-                      {planResult.planId}
+                      {planResult?.planId || 'PLAN-DEFAULT'}
                     </span>
                     <span className="text-[10px] font-mono text-white/50">
-                      Method: {planResult.generationMethod}
+                      Method: {planResult?.generationMethod || 'ROAR Clinical Engine'}
                     </span>
                   </div>
                   <h4 className="font-heading font-black text-sm uppercase text-white mt-1">
-                    {planResult.workoutPlan.splitName || 'ROAR Performance Plan'}
+                    {planResult?.workoutPlan?.splitName || 'ROAR Performance Plan'}
                   </h4>
                 </div>
 
                 {/* Macro Target Pills */}
                 <div className="flex items-center gap-2 text-[10px] font-mono">
                   <span className="px-2.5 py-1 rounded bg-black/60 border border-white/10 text-white">
-                    🔥 <strong className="text-white">{planResult.targets.targetCalories}</strong> kcal
+                    🔥 <strong className="text-white">{planResult?.targets?.targetCalories || planResult?.targets?.dailyCalories || 2200}</strong> kcal
                   </span>
                   <span className="px-2.5 py-1 rounded bg-black/60 border border-white/10 text-blue-400">
-                    🥩 <strong>{planResult.targets.macros.protein.grams}g</strong> protein
+                    🥩 <strong>{planResult?.targets?.macros?.protein?.grams || 120}g</strong> protein
                   </span>
                   <span className="px-2.5 py-1 rounded bg-black/60 border border-white/10 text-yellow-400">
-                    🥑 <strong>{planResult.targets.macros.fat.grams}g</strong> fat
+                    🥑 <strong>{planResult?.targets?.macros?.fat?.grams || 60}g</strong> fat
                   </span>
                 </div>
               </div>
@@ -676,10 +749,11 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
               {/* Disclaimer */}
               <div className="p-2.5 bg-black/60 border border-white/5 rounded-lg text-[9.5px] text-white/40 flex items-center gap-1.5">
                 <AlertTriangle className="w-3 h-3 text-[#FF5A1F] shrink-0" />
-                <span>{planResult.disclaimer}</span>
+                <span>{planResult?.disclaimer || 'This automated guidance is for physical conditioning purposes. Consult a certified health professional before starting.'}</span>
               </div>
             </div>
-          )}
+          ) : null}
+          </ErrorBoundary>
         </div>
 
         {/* Nested Trainer Review Modal */}

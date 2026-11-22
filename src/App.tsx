@@ -4,6 +4,7 @@ import { MainLayout } from './layouts/MainLayout/MainLayout';
 import { Home } from './pages/Home/Home';
 import { AuthProvider } from './context/AuthContext';
 import { AdminLayout } from './layouts/AdminLayout/AdminLayout';
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 
 // Lazy-loaded secondary & administrative routes for optimal code splitting
 const About = lazy(() => import('./pages/About/About').then((m) => ({ default: m.About })));
@@ -46,65 +47,67 @@ function ScrollToTop() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Public Website Routes */}
-            <Route
-              path="/"
-              element={
-                <MainLayout>
-                  <Home />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/about"
-              element={
-                <MainLayout>
-                  <About />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/training"
-              element={
-                <MainLayout>
-                  <Training />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <MainLayout>
-                  <Registration />
-                </MainLayout>
-              }
-            />
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public Website Routes */}
+              <Route
+                path="/"
+                element={
+                  <MainLayout>
+                    <Home />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/about"
+                element={
+                  <MainLayout>
+                    <About />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/training"
+                element={
+                  <MainLayout>
+                    <Training />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <MainLayout>
+                    <Registration />
+                  </MainLayout>
+                }
+              />
 
-            {/* Face Recognition Attendance Kiosk (Fullscreen) */}
-            <Route path="/kiosk" element={<Kiosk />} />
+              {/* Face Recognition Attendance Kiosk (Fullscreen) */}
+              <Route path="/kiosk" element={<Kiosk />} />
 
-            {/* Admin Authentication & Management Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="members" element={<AdminMembers />} />
-              <Route path="access-logs" element={<AdminAccessLogs />} />
-              <Route path="doors" element={<AdminDoors />} />
-              <Route path="leads" element={<AdminLeads />} />
-              <Route path="knowledge" element={<AdminKnowledge />} />
-            </Route>
+              {/* Admin Authentication & Management Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="members" element={<AdminMembers />} />
+                <Route path="access-logs" element={<AdminAccessLogs />} />
+                <Route path="doors" element={<AdminDoors />} />
+                <Route path="leads" element={<AdminLeads />} />
+                <Route path="knowledge" element={<AdminKnowledge />} />
+              </Route>
 
-            {/* 404 Handler */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+              {/* 404 Handler */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
