@@ -33,27 +33,30 @@ export const ChatbotQuickActions: React.FC<QuickActionsProps> = ({ onSelect, onA
   };
 
   return (
-    <div
-      data-lenis-prevent
-      className="flex flex-nowrap items-center gap-2 px-3 py-2 bg-[#111111] border-t border-white/10 overflow-x-auto overflow-y-hidden overscroll-contain select-none no-scrollbar shrink-0"
-    >
-      {QUICK_PROMPTS.map((item, index) => (
-        <button
-          key={index}
-          type="button"
-          disabled={disabled}
-          onClick={() => handleClick(item)}
-          className={`text-[10.5px] font-sans font-bold tracking-wider uppercase px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 shadow-sm ${
-            item.action === 'open_voice_coach'
-              ? 'bg-[#FF5A1F] text-black hover:bg-[#FF7545] border border-[#FF5A1F]'
-              : item.action === 'open_plan_generator'
-              ? 'bg-[#1c1c1c] text-[#FF5A1F] border border-[#FF5A1F]/40 hover:bg-[#FF5A1F] hover:text-black'
-              : 'bg-[#1c1c1c] hover:bg-[#FF5A1F] text-white/80 hover:text-black border border-white/10 hover:border-[#FF5A1F]'
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
+    <div className="relative border-t border-white/10 bg-[#111111]">
+      {/* Scrollable Pills Container with snap and edge visibility (D11) */}
+      <div
+        data-lenis-prevent
+        className="flex flex-nowrap items-center gap-2 px-3 py-2.5 overflow-x-auto overflow-y-hidden overscroll-contain select-none snap-x snap-mandatory scroll-px-3"
+      >
+        {QUICK_PROMPTS.map((item, index) => (
+          <button
+            key={index}
+            type="button"
+            disabled={disabled}
+            onClick={() => handleClick(item)}
+            className={`text-[10.5px] font-sans font-bold tracking-wider uppercase px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 shadow-sm snap-start ${
+              item.action === 'open_voice_coach'
+                ? 'bg-[#FF5A1F] text-black hover:bg-[#FF7545] border border-[#FF5A1F]'
+                : item.action === 'open_plan_generator'
+                ? 'bg-[#1c1c1c] text-[#FF5A1F] border border-[#FF5A1F]/40 hover:bg-[#FF5A1F] hover:text-black'
+                : 'bg-[#1c1c1c] hover:bg-[#FF5A1F] text-white/80 hover:text-black border border-white/10 hover:border-[#FF5A1F]'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

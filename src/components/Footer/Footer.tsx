@@ -23,23 +23,25 @@ export const Footer: React.FC = () => {
             <p className="text-xs text-white/50 leading-relaxed mb-4">
               {businessConfig.city}'s dedicated athletic conditioning and training studio. General gym, strength, cardio, Zumba, CrossFit & kickboxing.
             </p>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
               <a
                 href={businessConfig.socialLinks.facebook}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#FF5A1F] hover:underline inline-flex items-center gap-1 font-mono"
+                className="text-[#FF5A1F] hover:underline inline-flex items-center gap-1 font-mono whitespace-nowrap"
               >
-                Facebook Page <ExternalLink className="w-3 h-3" />
+                <span>Facebook Page</span>
+                <ExternalLink className="w-3 h-3 shrink-0" />
               </a>
               <span className="text-white/20">•</span>
               <a
                 href={businessConfig.socialLinks.magicpin}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#FF5A1F] hover:underline inline-flex items-center gap-1 font-mono"
+                className="text-[#FF5A1F] hover:underline inline-flex items-center gap-1 font-mono whitespace-nowrap"
               >
-                Magicpin Profile <ExternalLink className="w-3 h-3" />
+                <span>Magicpin Profile</span>
+                <ExternalLink className="w-3 h-3 shrink-0" />
               </a>
             </div>
           </div>
@@ -61,10 +63,10 @@ export const Footer: React.FC = () => {
                 <Link to="/training" className="hover:text-[#FF5A1F] transition-colors">8 Training Disciplines</Link>
               </li>
               <li>
-                <a href="/#amenities" className="hover:text-[#FF5A1F] transition-colors">Amenities & Facilities</a>
+                <Link to="/#amenities" className="hover:text-[#FF5A1F] transition-colors">Amenities & Facilities</Link>
               </li>
               <li>
-                <a href="/#gallery" className="hover:text-[#FF5A1F] transition-colors">Gym Photo Gallery</a>
+                <Link to="/#gallery" className="hover:text-[#FF5A1F] transition-colors">Gym Photo Gallery</Link>
               </li>
               <li>
                 <Link to="/register" className="hover:text-[#FF5A1F] transition-colors font-semibold text-[#FF5A1F]">

@@ -337,7 +337,7 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
                   <Dumbbell className="w-3.5 h-3.5 text-[#FF5A1F]" /> 2. Athletic Goal & Schedule
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block text-[10px] text-white/50 font-mono mb-1">Primary Fitness Goal</label>
                     <select
