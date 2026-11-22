@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import { env } from '../config/environment.js';
 import { logger } from '../utils/logger.js';
 import { MembershipPlan } from '../models/MembershipPlan.js';
@@ -20,16 +21,17 @@ export async function seedAttendanceAndDoors() {
   // 0. Ensure Admin Account
   const existingAdmin = await Admin.findOne({ email: 'admin@roarextreme.com' });
   if (!existingAdmin) {
-    const passwordHash = await Admin.hashPassword('RoarAdmin#2026');
+    const defaultPassword = process.env.INITIAL_ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex');
+    const passwordHash = await Admin.hashPassword(defaultPassword);
     await Admin.create({
       name: 'Roar Operations Admin',
       email: 'admin@roarextreme.com',
       passwordHash,
       role: 'owner',
       isActive: true,
-      mustChangePassword: false,
+      mustChangePassword: true,
     });
-    logger.info('Provisioned default admin: admin@roarextreme.com (Password: RoarAdmin#2026)');
+    logger.info('Provisioned admin account: admin@roarextreme.com (Password set via INITIAL_ADMIN_PASSWORD or secure random generator)');
   }
 
   // 1. Ensure Membership Plans

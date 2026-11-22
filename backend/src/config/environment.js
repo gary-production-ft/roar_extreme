@@ -57,7 +57,19 @@ export function validateEnvironment(logger) {
     }
   }
 
-  if (env.nodeEnv === 'production') {
+  const isProd = (process.env.NODE_ENV || env.nodeEnv) === 'production';
+  const compromisedCredentials = ['RoarAdmin#2026', 'admin123', 'password', '12345678'];
+  if (process.env.ADMIN_PASSWORD && compromisedCredentials.includes(process.env.ADMIN_PASSWORD)) {
+    missing.push('ADMIN_PASSWORD is set to a compromised default credential. Refusing startup.');
+  }
+  if (process.env.INITIAL_ADMIN_PASSWORD && compromisedCredentials.includes(process.env.INITIAL_ADMIN_PASSWORD)) {
+    missing.push('INITIAL_ADMIN_PASSWORD is set to a compromised default credential. Refusing startup.');
+  }
+  if (process.env.JWT_SECRET && compromisedCredentials.some(c => process.env.JWT_SECRET.includes(c))) {
+    missing.push('JWT_SECRET contains a compromised password string. Refusing startup.');
+  }
+
+  if (isProd) {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev_jwt_secret_change_in_production' || process.env.JWT_SECRET.length < 32) {
       warnings.push('JWT_SECRET should be set to a secure, non-default string of at least 32 characters in production.');
     }

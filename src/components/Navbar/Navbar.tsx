@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowUpRight, Lock, Sparkles } from 'lucide-react';
+import { Menu, X, ArrowUpRight, Sparkles } from 'lucide-react';
 import { AnimatedButton } from '../AnimatedButton/AnimatedButton';
 import roarLogoImg from '../../assets/roar/branding/roar-logo.jpg';
 import { FitnessPlanModal } from '../FitnessPlan/FitnessPlanModal';
@@ -106,14 +106,6 @@ export const Navbar: React.FC = () => {
               <Sparkles className="w-3.5 h-3.5 text-[#FF5A1F] group-hover:text-black" />
               <span>Custom Plan</span>
             </button>
-            <Link
-              to="/admin/login"
-              title="Staff & Admin Portal"
-              className="p-2.5 text-white/50 hover:text-[#FF5A1F] transition-colors rounded-lg border border-white/10 hover:border-[#FF5A1F]/40 bg-white/5"
-              aria-label="Staff & Admin Portal"
-            >
-              <Lock className="w-4 h-4" />
-            </Link>
             <AnimatedButton to="/register" variant="primary" className="py-2.5 px-5 text-xs">
               CLAIM FREE SESSION <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
             </AnimatedButton>
@@ -200,14 +192,6 @@ export const Navbar: React.FC = () => {
               >
                 CLAIM FREE SESSION PASS
               </AnimatedButton>
-              <Link
-                to="/admin/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 py-2.5 text-xs font-mono uppercase text-white/50 hover:text-white transition-colors border border-white/10 rounded-lg bg-white/5"
-              >
-                <Lock className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                <span>Staff & Admin Portal</span>
-              </Link>
               <p className="text-[11px] text-[#A0A0A0] text-center font-mono">
                 6th Floor Rooftop • Vidya Vikas Circle, Nashik
               </p>

@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, Mail, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiUrl } from '../../config/api';
 
 export const AdminLogin: React.FC = () => {
-  const [email, setEmail] = useState('admin@roarextreme.com');
-  const [password, setPassword] = useState('RoarAdmin#2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="robots"]');
+    let created = false;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'robots');
+      document.head.appendChild(meta);
+      created = true;
+    }
+    meta.setAttribute('content', 'noindex, nofollow');
+    return () => {
+      if (created && meta && meta.parentNode) {
+        meta.parentNode.removeChild(meta);
+      } else if (meta) {
+        meta.setAttribute('content', 'all');
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +77,10 @@ export const AdminLogin: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center gap-2.5 text-red-400 text-xs">
+          <div
+            role="alert"
+            className="mb-6 p-3 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center gap-2.5 text-red-400 text-xs"
+          >
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -77,6 +99,7 @@ export const AdminLogin: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@roarextreme.com"
+                autoComplete="username"
                 className="w-full bg-[#181818] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#FF5A1F] transition-colors"
               />
             </div>
@@ -94,6 +117,7 @@ export const AdminLogin: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
+                autoComplete="current-password"
                 className="w-full bg-[#181818] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#FF5A1F] transition-colors"
               />
             </div>
@@ -115,16 +139,17 @@ export const AdminLogin: React.FC = () => {
           </button>
         </form>
 
-        {/* Demo credentials hint */}
+        {/* Back to Home Link */}
         <div className="mt-8 pt-6 border-t border-white/10 text-center">
-          <p className="text-[11px] text-white/40 font-mono">
-            Provisioned Superadmin: <br />
-            <span className="text-white/70">admin@roarextreme.com</span> /{' '}
-            <span className="text-[#FF5A1F]/80">RoarAdmin#2026</span>
-          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-[#FF5A1F] transition-colors font-mono uppercase tracking-wider"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Return to Roar Extreme</span>
+          </Link>
         </div>
       </div>
     </div>
   );
 };
-

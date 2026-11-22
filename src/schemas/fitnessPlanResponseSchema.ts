@@ -59,11 +59,15 @@ export const fitnessPlanResponseSchema = z
           .object({
             protein: z.any().optional(),
             fat: z.any().optional(),
+            fats: z.any().optional(),
             carbohydrates: z.any().optional(),
+            carbs: z.any().optional(),
             proteinG: z.coerce.number().optional(),
             fatsG: z.coerce.number().optional(),
+            fatG: z.coerce.number().optional(),
             carbsG: z.coerce.number().optional(),
           })
+          .passthrough()
           .optional(),
       })
       .transform((val) => {

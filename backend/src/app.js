@@ -72,6 +72,12 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Prevent search engine indexing of admin and auth routes
+app.use(['/api/admin', '/api/auth'], (_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
+
 // Hardened Production CORS Configuration
 const explicitAllowedOrigins = new Set([
   'https://roarextreme.vercel.app',

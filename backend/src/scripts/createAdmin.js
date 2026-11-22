@@ -12,6 +12,11 @@ async function createAdmin() {
   let password = process.env.ADMIN_PASSWORD || process.argv[3];
   let forcePasswordChange = false;
 
+  if (password && ['RoarAdmin#2026', 'admin123', 'password'].includes(password)) {
+    logger.error('CRITICAL SECURITY: Cannot provision admin with known compromised password. Aborting.');
+    process.exit(1);
+  }
+
   if (!password) {
     // Generate secure 12-char random temp password and enforce password change on first login
     password = `Roar#${crypto.randomBytes(6).toString('hex')}`;
