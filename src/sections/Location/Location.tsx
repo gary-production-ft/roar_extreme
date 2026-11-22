@@ -1,11 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Navigation, Calendar, Phone, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, Navigation, Calendar, Phone, ExternalLink, Map, AlertCircle } from 'lucide-react';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { AnimatedButton } from '../../components/AnimatedButton/AnimatedButton';
 import { businessConfig } from '../../config/business';
 
 export const Location: React.FC = () => {
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [hasMapFailed, setHasMapFailed] = useState(false);
+
+  useEffect(() => {
+    // D19: Load timeout fallback - if embed doesn't finish loading in 5s, activate placeholder fallback
+    const timer = setTimeout(() => {
+      if (!isMapLoaded) {
+        setHasMapFailed(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [isMapLoaded]);
+
   return (
     <section id="location" className="scroll-mt-20 py-20 md:py-28 bg-[#080808] relative overflow-hidden border-t border-white/10">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
@@ -20,7 +34,7 @@ export const Location: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '50px' }}
             transition={{ duration: 0.6 }}
             className="lg:col-span-5 bg-[#111111] border border-white/10 p-6 sm:p-8 md:p-10 flex flex-col justify-between"
           >
@@ -76,28 +90,22 @@ export const Location: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Phone Contact with Pending Owner Confirmation */}
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="w-4 h-4 text-[#FF5A1F]" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-white font-bold text-sm leading-snug">
-                        Directory Helpline
-                      </h4>
-                      <span className="text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-1.5 py-0.5 font-mono uppercase">
-                        Pending Confirmation
-                      </span>
+                {/* D16: Phone Contact only rendered if officially verified by owner */}
+                {businessConfig.contact.isPhoneVerifiedByOwner && (
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Phone className="w-4 h-4 text-[#FF5A1F]" />
                     </div>
-                    <p className="text-white font-mono text-xs sm:text-sm font-semibold mb-0.5">
-                      {businessConfig.contact.phoneFormatted}
-                    </p>
-                    <p className="text-[11px] text-white/40">
-                      {businessConfig.contact.phonePendingNotice}
-                    </p>
+                    <div className="flex-1">
+                      <h4 className="text-white font-bold text-sm leading-snug mb-1">
+                        Helpline
+                      </h4>
+                      <p className="text-white font-mono text-xs sm:text-sm font-semibold">
+                        {businessConfig.contact.phoneFormatted}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Arrival Protocol */}
                 <div className="flex items-start gap-4">
@@ -157,31 +165,86 @@ export const Location: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Interactive Map Visual */}
+          {/* Interactive Map Visual with D19 Lazy Fallback Placeholder */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '50px' }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="lg:col-span-7 bg-[#171717] border border-white/10 relative overflow-hidden min-h-[300px] sm:min-h-[420px] flex flex-col"
+            className="lg:col-span-7 bg-[#171717] border border-white/10 relative overflow-hidden min-h-[300px] sm:min-h-[420px] flex flex-col justify-center"
           >
+            {/* Fallback / Immediate Placeholder Card (D19) */}
+            {(!isMapLoaded || hasMapFailed) && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-[#141414]">
+                <div className="w-14 h-14 rounded-full bg-[#FF5A1F]/10 border border-[#FF5A1F] flex items-center justify-center text-[#FF5A1F] mb-4">
+                  {hasMapFailed ? <Map className="w-7 h-7" /> : <MapPin className="w-7 h-7 animate-bounce" />}
+                </div>
+
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF5A1F] font-bold mb-1">
+                  {hasMapFailed ? 'MAP PREVIEW UNAVAILABLE' : 'LOADING MAP VIEW'}
+                </span>
+
+                <h4 className="text-lg sm:text-xl font-['Anton',sans-serif] uppercase text-white mb-2">
+                  {businessConfig.name} ROOFTOP ARENA
+                </h4>
+
+                <p className="text-xs sm:text-sm text-[#A0A0A0] max-w-md leading-relaxed mb-6 font-medium">
+                  {businessConfig.address.fullFormatted}
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={businessConfig.address.googleMapsDirectionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#FF5A1F] hover:bg-[#FF7545] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-lg"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Get Directions</span>
+                  </a>
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(businessConfig.address.fullFormatted)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 border border-white/20 hover:border-[#FF5A1F] hover:text-[#FF5A1F] text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open in Google Maps</span>
+                  </a>
+                </div>
+
+                {hasMapFailed && (
+                  <p className="text-[11px] font-mono text-white/40 mt-4 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-[#FF5A1F]" />
+                    <span>Embed blocked or slow network. Navigation links above work directly.</span>
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Embed Map Canvas */}
             <iframe
               title="Roar Extreme Official Studio Location Map"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3749.127546682664!2d73.7634457!3d20.0094151!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bddeb99f3d80043%3A0xe11b269b99a6d07e!2sRoar%20Fitness!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
-              className="w-full h-full min-h-[300px] sm:min-h-[420px] border-0 filter grayscale invert contrast-125 opacity-80 hover:opacity-100 transition-opacity duration-500"
+              className={`w-full h-full min-h-[300px] sm:min-h-[420px] border-0 filter grayscale invert contrast-125 opacity-80 hover:opacity-100 transition-opacity duration-500 ${
+                isMapLoaded && !hasMapFailed ? 'opacity-80' : 'opacity-0'
+              }`}
               allowFullScreen={false}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
+              onLoad={() => setIsMapLoaded(true)}
+              onError={() => setHasMapFailed(true)}
             />
 
             {/* Corner Badge */}
-            <div className="absolute top-4 right-4 bg-black/90 backdrop-blur-md border border-[#FF5A1F]/40 px-3 py-1.5 flex items-center gap-2 pointer-events-none shadow-xl">
-              <span className="w-2 h-2 rounded-full bg-[#FF5A1F] animate-ping" />
-              <span className="text-[10px] sm:text-xs font-mono text-white uppercase tracking-wider font-semibold">
-                601/602 Rushiraj Regency • Above Axis Bank
-              </span>
-            </div>
+            {isMapLoaded && !hasMapFailed && (
+              <div className="absolute top-4 right-4 bg-black/90 backdrop-blur-md border border-[#FF5A1F]/40 px-3 py-1.5 flex items-center gap-2 pointer-events-none shadow-xl z-20">
+                <span className="w-2 h-2 rounded-full bg-[#FF5A1F] animate-ping" />
+                <span className="text-[10px] sm:text-xs font-mono text-white uppercase tracking-wider font-semibold">
+                  601/602 Rushiraj Regency • Above Axis Bank
+                </span>
+              </div>
+            )}
           </motion.div>
         </div>
       </div>
