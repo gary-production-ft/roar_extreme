@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +22,13 @@ export const Registration: React.FC = () => {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submittedLead, setSubmittedLead] = useState<Lead | null>(null);
   const [copied, setCopied] = useState(false);
+  // Double-submit guard
+  const submittingRef = useRef(false);
+  // Error summary banner ref for focus management
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+  // Input refs for focus-first-error
+  const fullNameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -40,7 +47,12 @@ export const Registration: React.FC = () => {
     },
   });
 
-  const onSubmit = async (data: LeadFormValues) => {
+  const { ref: fullNameFormRef, ...fullNameRest } = register('fullName');
+  const { ref: phoneFormRef, ...phoneRest } = register('phone');
+
+  const onSubmit = useCallback(async (data: LeadFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     setSubmissionError(null);
 
@@ -63,14 +75,33 @@ export const Registration: React.FC = () => {
       setSubmissionError(msg);
     } finally {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
-  };
+  }, [reset]);
+
+  // Validation error handler: scroll to summary and focus first invalid field
+  const onValidationError = useCallback(() => {
+    // Focus error summary banner first so screen readers announce it
+    setTimeout(() => {
+      if (errorSummaryRef.current) {
+        errorSummaryRef.current.focus();
+      } else if (fullNameRef.current && errors.fullName) {
+        fullNameRef.current.focus();
+      } else if (phoneRef.current && errors.phone) {
+        phoneRef.current.focus();
+      }
+    }, 50);
+  }, [errors]);
 
   const copyRefToClipboard = (ref: string) => {
     navigator.clipboard.writeText(ref);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Count validation errors for summary
+  const errorKeys = Object.keys(errors) as Array<keyof typeof errors>;
+  const hasErrors = errorKeys.length > 0;
 
   return (
     <div className="pt-24 sm:pt-32 pb-16 sm:pb-24 min-h-screen bg-[#080808] text-white">
@@ -98,97 +129,59 @@ export const Registration: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-[#111111] border border-[#FF5A1F]/40 p-6 sm:p-10 shadow-2xl relative overflow-hidden"
+              className="bg-[#111111] border border-white/10 p-8 sm:p-12 text-center shadow-2xl"
             >
-              {/* Top Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-[#FF5A1F]" />
-
-              <div className="text-center mb-8">
-                <div className="w-14 h-14 rounded-full bg-[#FF5A1F]/10 border border-[#FF5A1F] mx-auto flex items-center justify-center text-[#FF5A1F] mb-4">
-                  <CheckCircle2 className="w-7 h-7" />
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-[#FF5A1F]" />
                 </div>
-                <span className="text-xs font-mono uppercase tracking-widest text-[#FF5A1F] block mb-1">
-                  APPLICATION CONFIRMED
-                </span>
-                <h2 className="text-3xl sm:text-5xl font-['Anton',sans-serif] uppercase text-white tracking-tight">
-                  YOUR ROAR STARTS HERE!
-                </h2>
               </div>
+              <h2 className="text-2xl sm:text-4xl font-black font-['Anton',sans-serif] uppercase text-white tracking-tight mb-2">
+                Application Received
+              </h2>
+              <p className="text-[#A0A0A0] text-sm max-w-sm mx-auto mb-8">
+                Our team will contact you within 24 hours to confirm your complimentary session.
+              </p>
 
-              {/* Digital Pass Summary Card */}
-              <div className="bg-[#171717] border border-white/10 p-6 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-2">
-                  <div>
-                    <span className="text-[11px] uppercase font-mono text-white/50 block">MEMBER PASS HOLDER</span>
-                    <h3 className="text-lg font-bold text-white uppercase">{submittedLead.fullName}</h3>
-                  </div>
-                  <div>
-                    <span className="text-[11px] uppercase font-mono text-white/50 block">REGISTERED MOBILE</span>
-                    <p className="text-sm font-mono text-white/80">+91 {submittedLead.phone}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4 border-b border-white/10 text-xs">
-                  <div>
-                    <span className="text-white/40 uppercase block mb-0.5">PREFERRED TIME</span>
-                    <span className="font-semibold text-white capitalize">{submittedLead.preferredTime}</span>
-                  </div>
-                  <div>
-                    <span className="text-white/40 uppercase block mb-0.5">FITNESS GOAL</span>
-                    <span className="font-semibold text-white capitalize">{submittedLead.fitnessGoal.replace('-', ' ')}</span>
-                  </div>
-                  <div>
-                    <span className="text-white/40 uppercase block mb-0.5">EXPERIENCE LEVEL</span>
-                    <span className="font-semibold text-white capitalize">{submittedLead.experienceLevel}</span>
-                  </div>
-                </div>
-
-                {/* Reference ID Pill */}
-                <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[11px] font-mono uppercase text-[#FF5A1F] block">BOOKING REFERENCE ID</span>
-                    <p className="text-xl sm:text-2xl font-mono font-black text-white tracking-wider">
+              {submittedLead.bookingReference && (
+                <div className="mb-8 p-4 bg-[#141414] border border-[#FF5A1F]/30 inline-flex flex-col sm:flex-row items-center gap-3 mx-auto">
+                  <div className="text-left">
+                    <p className="text-[10px] uppercase tracking-widest text-[#A0A0A0] font-mono mb-0.5">
+                      Reference ID
+                    </p>
+                    <p className="text-lg font-black font-mono text-[#FF5A1F] tracking-widest">
                       {submittedLead.bookingReference}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => copyRefToClipboard(submittedLead.bookingReference || '')}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs uppercase font-mono text-white transition-colors"
+                    onClick={() => copyRefToClipboard(submittedLead.bookingReference!)}
+                    className="p-2 border border-white/15 hover:border-[#FF5A1F]/50 text-white/50 hover:text-[#FF5A1F] transition-colors cursor-pointer"
+                    aria-label="Copy reference ID"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'COPIED TO CLIPBOARD' : 'COPY PASS ID'}
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
+              )}
 
-              {/* Next Steps Guidance */}
-              <div className="bg-black/50 border border-white/5 p-5 mb-6 text-sm">
-                <h4 className="text-white font-bold uppercase tracking-wider mb-2 flex items-center gap-2 text-xs">
-                  <Clock className="w-4 h-4 text-[#FF5A1F]" />
-                  NEXT STEPS
-                </h4>
-                <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed mb-4">
-                  Our performance coach will contact you shortly to confirm your exact training slot.
+              <div className="mb-8 p-4 bg-[#141414] border border-white/10 text-left space-y-3 max-w-sm mx-auto">
+                <p className="text-xs uppercase font-bold tracking-wider text-[#A0A0A0] mb-2 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#FF5A1F]" /> What to bring
                 </p>
-
-                <div className="pt-3 border-t border-white/10">
-                  <p className="text-[11px] uppercase font-mono text-[#FF5A1F] mb-2 font-bold">WHAT TO BRING ON DAY 1:</p>
-                  <ul className="space-y-1.5 text-xs text-neutral-300">
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
-                      Clean change of sports shoes (mandatory for platform hygiene)
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
-                      Personal workout towel
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
-                      Digital confirmation pass or Reference ID above
-                    </li>
-                  </ul>
-                </div>
+                <ul className="space-y-1.5 text-xs text-[#A0A0A0]">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
+                    Clean change of sports shoes (mandatory for platform hygiene)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
+                    Personal workout towel
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF5A1F] shrink-0" />
+                    Digital confirmation pass or Reference ID above
+                  </li>
+                </ul>
               </div>
 
               {/* Actions */}
@@ -214,14 +207,48 @@ export const Registration: React.FC = () => {
               exit={{ opacity: 0, y: -15 }}
               className="bg-[#111111] border border-white/10 p-6 sm:p-10 shadow-2xl"
             >
+              {/* Accessible Error Summary Banner — appears on failed submit */}
+              {hasErrors && (
+                <div
+                  ref={errorSummaryRef}
+                  role="alert"
+                  aria-live="assertive"
+                  tabIndex={-1}
+                  className="mb-6 p-4 bg-[#1A1310] border border-[#FF5A1F]/60 flex items-start gap-3 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#FF5A1F]"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0 text-[#FF5A1F] mt-0.5" />
+                  <div>
+                    <p className="font-bold text-white mb-1">
+                      Please correct {errorKeys.length} error{errorKeys.length > 1 ? 's' : ''} before submitting
+                    </p>
+                    <ul className="space-y-0.5 text-[#A0A0A0]">
+                      {errors.fullName && <li>• Full name: {errors.fullName.message}</li>}
+                      {errors.phone && <li>• Mobile number: {errors.phone.message}</li>}
+                      {errors.email && <li>• Email: {errors.email.message}</li>}
+                      {errors.preferredTime && <li>• Training time: {errors.preferredTime.message}</li>}
+                      {errors.fitnessGoal && <li>• Fitness goal: {errors.fitnessGoal.message}</li>}
+                      {errors.experienceLevel && <li>• Experience level: {errors.experienceLevel.message}</li>}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Network / server submission error */}
               {submissionError && (
-                <div className="mb-6 p-4 bg-red-900/20 border border-red-500/50 flex items-center gap-3 text-red-400 text-xs sm:text-sm">
+                <div
+                  role="alert"
+                  className="mb-6 p-4 bg-[#1A1310] border border-[#FF5A1F]/60 flex items-center gap-3 text-[#FF5A1F] text-xs sm:text-sm"
+                >
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <span>{submissionError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-7" noValidate>
+              <form
+                onSubmit={handleSubmit(onSubmit, onValidationError)}
+                className="flex flex-col gap-7"
+                noValidate
+              >
                 {/* 1. Full Name */}
                 <div>
                   <label htmlFor="fullName" className="block text-xs uppercase font-bold tracking-wider text-white mb-2">
@@ -232,13 +259,19 @@ export const Registration: React.FC = () => {
                     type="text"
                     placeholder="Enter your full name"
                     disabled={isSubmitting}
-                    {...register('fullName')}
+                    aria-invalid={Boolean(errors.fullName)}
+                    aria-describedby={errors.fullName ? 'err-fullName' : undefined}
+                    {...fullNameRest}
+                    ref={(el) => {
+                      fullNameFormRef(el);
+                      (fullNameRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+                    }}
                     className={`w-full bg-[#171717] border ${
-                      errors.fullName ? 'border-red-500' : 'border-white/10 focus:border-[#FF5A1F]'
-                    } px-4 py-3.5 text-white placeholder-white/30 text-[16px] sm:text-sm outline-none transition-colors`}
+                      errors.fullName ? 'border-[#FF5A1F]' : 'border-white/10 focus:border-[#FF5A1F]'
+                    } px-4 py-3.5 text-white placeholder-white/30 text-[16px] sm:text-sm outline-none transition-colors focus:ring-1 focus:ring-[#FF5A1F]`}
                   />
                   {errors.fullName && (
-                    <p className="text-red-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                    <p id="err-fullName" className="text-[#FF5A1F] text-xs mt-1.5 font-medium flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" />
                       {errors.fullName.message}
                     </p>
@@ -247,14 +280,14 @@ export const Registration: React.FC = () => {
 
                 {/* 2. Mobile & 3. Email in 2 columns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Mobile Number - Bulletproof segmented input */}
+                  {/* Mobile Number */}
                   <div>
                     <label htmlFor="phone" className="block text-xs uppercase font-bold tracking-wider text-white mb-2">
                       2. MOBILE NUMBER <span className="text-[#FF5A1F]">*</span>
                     </label>
                     <div
                       className={`flex items-center bg-[#171717] border ${
-                        errors.phone ? 'border-red-500' : 'border-white/10 focus-within:border-[#FF5A1F]'
+                        errors.phone ? 'border-[#FF5A1F]' : 'border-white/10 focus-within:border-[#FF5A1F]'
                       } transition-colors`}
                     >
                       <div className="px-3.5 py-3.5 bg-white/5 border-r border-white/10 text-xs font-mono font-bold text-[#FF5A1F] select-none shrink-0">
@@ -266,12 +299,18 @@ export const Registration: React.FC = () => {
                         maxLength={10}
                         placeholder="10-digit number"
                         disabled={isSubmitting}
-                        {...register('phone')}
+                        aria-invalid={Boolean(errors.phone)}
+                        aria-describedby={errors.phone ? 'err-phone' : undefined}
+                        {...phoneRest}
+                        ref={(el) => {
+                          phoneFormRef(el);
+                          (phoneRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+                        }}
                         className="w-full bg-transparent px-3.5 py-3.5 text-white placeholder-white/30 text-[16px] sm:text-sm font-mono outline-none border-0"
                       />
                     </div>
                     {errors.phone && (
-                      <p className="text-red-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                      <p id="err-phone" className="text-[#FF5A1F] text-xs mt-1.5 font-medium flex items-center gap-1">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {errors.phone.message}
                       </p>
@@ -288,13 +327,15 @@ export const Registration: React.FC = () => {
                       type="email"
                       placeholder="name@example.com"
                       disabled={isSubmitting}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? 'err-email' : undefined}
                       {...register('email')}
                       className={`w-full bg-[#171717] border ${
-                        errors.email ? 'border-red-500' : 'border-white/10 focus:border-[#FF5A1F]'
+                        errors.email ? 'border-[#FF5A1F]' : 'border-white/10 focus:border-[#FF5A1F]'
                       } px-4 py-3.5 text-white placeholder-white/30 text-[16px] sm:text-sm outline-none transition-colors`}
                     />
                     {errors.email && (
-                      <p className="text-red-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                      <p id="err-email" className="text-[#FF5A1F] text-xs mt-1.5 font-medium flex items-center gap-1">
                         <AlertCircle className="w-3.5 h-3.5" />
                         {errors.email.message}
                       </p>
@@ -333,7 +374,7 @@ export const Registration: React.FC = () => {
                     ))}
                   </div>
                   {errors.preferredTime && (
-                    <p className="text-red-400 text-xs mt-1.5 font-medium">
+                    <p className="text-[#FF5A1F] text-xs mt-1.5 font-medium">
                       {errors.preferredTime.message}
                     </p>
                   )}
@@ -369,7 +410,7 @@ export const Registration: React.FC = () => {
                     ))}
                   </div>
                   {errors.fitnessGoal && (
-                    <p className="text-red-400 text-xs mt-1.5 font-medium">
+                    <p className="text-[#FF5A1F] text-xs mt-1.5 font-medium">
                       {errors.fitnessGoal.message}
                     </p>
                   )}
@@ -406,7 +447,7 @@ export const Registration: React.FC = () => {
                     ))}
                   </div>
                   {errors.experienceLevel && (
-                    <p className="text-red-400 text-xs mt-1.5 font-medium">
+                    <p className="text-[#FF5A1F] text-xs mt-1.5 font-medium">
                       {errors.experienceLevel.message}
                     </p>
                   )}
@@ -431,7 +472,7 @@ export const Registration: React.FC = () => {
                     )}
                   </button>
                   <p className="text-center text-[11px] text-white/40 mt-3">
-                    Phase 1 Frontend Sandbox • Zero payment collected • No spam guarantee
+                    No payment collected • No spam guarantee
                   </p>
                 </div>
               </form>
