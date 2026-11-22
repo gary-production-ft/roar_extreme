@@ -10,6 +10,7 @@ export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>('Home');
   const location = useLocation();
 
   useEffect(() => {
@@ -36,6 +37,52 @@ export const Navbar: React.FC = () => {
   // When not on home page, navbar is always opaque to prevent content bleeding
   const isHomePage = location.pathname === '/';
   const showOpaqueNavbar = !isHomePage || isScrolled;
+
+  // Hybrid Routing & Scroll Spy Active Item Tracking (D5)
+  useEffect(() => {
+    if (!isHomePage) {
+      if (location.pathname === '/about') {
+        setActiveSection('About');
+      } else if (location.pathname === '/training') {
+        setActiveSection('Training');
+      } else {
+        setActiveSection('');
+      }
+      return;
+    }
+
+    // Scroll spy on Home page tracking section scroll positions
+    const sectionIds = ['amenities', 'gallery', 'location'];
+
+    const handleScrollSpy = () => {
+      // Home is active only near the top of the page
+      if (window.scrollY < 260) {
+        setActiveSection('Home');
+        return;
+      }
+
+      // Check current scroll position against section boundaries
+      const scrollPos = window.scrollY + 140; // Navbar offset
+      let currentSection = 'Home';
+
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            currentSection = id.charAt(0).toUpperCase() + id.slice(1);
+            break;
+          }
+        }
+      }
+      setActiveSection(currentSection);
+    };
+
+    window.addEventListener('scroll', handleScrollSpy, { passive: true });
+    handleScrollSpy();
+    return () => window.removeEventListener('scroll', handleScrollSpy);
+  }, [isHomePage, location.pathname, location.hash]);
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -70,25 +117,22 @@ export const Navbar: React.FC = () => {
             </span>
           </Link>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8">
+          {/* Desktop Nav Links (D8: lg:flex prevents overlap on 768-1024 tablet) */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
             {navLinks.map((link) => {
-              const isActive = location.pathname === link.path && !link.path.includes('#');
+              const isActive = activeSection === link.name;
               return (
                 <Link
                   key={link.name}
                   to={link.path}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`relative text-xs uppercase font-semibold tracking-widest transition-colors py-2 px-1 ${
                     isActive ? 'text-[#FF5A1F]' : 'text-[#A0A0A0] hover:text-white'
                   }`}
                 >
                   {link.name}
                   {isActive && (
-                    <motion.div
-                      layoutId="nav-underline"
-                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FF5A1F]"
-                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                    />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FF5A1F]" />
                   )}
                 </Link>
               );
@@ -96,7 +140,7 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Right CTA */}
-          <div className="hidden md:flex items-center gap-3 shrink-0">
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setIsPlanModalOpen(true)}
@@ -111,10 +155,10 @@ export const Navbar: React.FC = () => {
             </AnimatedButton>
           </div>
 
-          {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle (D8: Switches to drawer below lg) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#FF5A1F] rounded-lg cursor-pointer"
+            className="lg:hidden text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#FF5A1F] rounded-lg cursor-pointer"
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileMenuOpen}
           >
@@ -131,7 +175,7 @@ export const Navbar: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-30 bg-[#080808] flex flex-col justify-between p-6 sm:p-8 pt-24 pb-8 md:hidden overflow-y-auto overscroll-contain"
+            className="fixed inset-0 z-30 bg-[#080808] flex flex-col justify-between p-6 sm:p-8 pt-24 pb-8 lg:hidden overflow-y-auto overscroll-contain"
           >
             <div className="flex flex-col gap-4 sm:gap-6 my-auto">
               {/* Brand Emblem in Mobile Menu */}
@@ -156,17 +200,25 @@ export const Navbar: React.FC = () => {
               <span className="text-[11px] uppercase font-mono tracking-widest text-[#FF5A1F] block">
                 Directory & Facilities
               </span>
-              {navLinks.map((link, idx) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-2xl sm:text-3xl font-['Anton',sans-serif] uppercase text-white hover:text-[#FF5A1F] transition-colors py-2 flex items-center justify-between border-b border-white/5 active:text-[#FF5A1F]"
-                >
-                  <span>{link.name}</span>
-                  <span className="text-xs font-mono text-white/30">0{idx + 1}</span>
-                </Link>
-              ))}
+              {navLinks.map((link, idx) => {
+                const isActive = activeSection === link.name;
+                return (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`text-2xl sm:text-3xl font-['Anton',sans-serif] uppercase py-2 flex items-center justify-between border-b border-white/5 transition-colors ${
+                      isActive ? 'text-[#FF5A1F]' : 'text-white hover:text-[#FF5A1F]'
+                    }`}
+                  >
+                    <span>{link.name}</span>
+                    <span className={`text-xs font-mono ${isActive ? 'text-[#FF5A1F]' : 'text-white/30'}`}>
+                      0{idx + 1}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="pt-6 border-t border-white/10 flex flex-col gap-3 mt-6">
