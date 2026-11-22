@@ -69,11 +69,23 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   );
 
   if (to && !disabled) {
-    return <Link to={to} className="inline-block">{content}</Link>;
+    return (
+      <Link
+        to={to}
+        className="inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5A1F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808] rounded-sm"
+      >
+        {content}
+      </Link>
+    );
   }
 
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className="inline-block bg-transparent p-0 m-0 border-0 outline-none">
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-block bg-transparent p-0 m-0 border-0 outline-none focus-visible:ring-2 focus-visible:ring-[#FF5A1F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808] rounded-sm"
+    >
       {content}
     </button>
   );

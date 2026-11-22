@@ -293,7 +293,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
               <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/50 leading-tight mt-0.5 truncate">
                 <span>Rooftop Nashik</span>
                 <span className="text-white/25">•</span>
-                <span className="text-[#FF5A1F] font-bold">Gemini 3.5</span>
+                <span className="text-[#FF5A1F] font-bold">AI-Powered</span>
               </div>
             </div>
           </div>
@@ -436,7 +436,7 @@ export const ChatbotWindow: React.FC<ChatbotWindowProps> = ({ isOpen, onClose })
             <AlertTriangle className="w-3 h-3 text-[#FF5A1F] shrink-0" />
             <span>Grounded official facts. Not medical advice.</span>
           </span>
-          <span className="font-mono text-[9px] text-[#FF5A1F]/80">Gemini 3.5 Live</span>
+          <span className="font-mono text-[9px] text-[#FF5A1F]/80">Roar AI Coach</span>
         </div>
 
         {/* Input Bar with Speech Dictation Mic */}

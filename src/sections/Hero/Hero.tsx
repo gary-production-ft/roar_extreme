@@ -80,12 +80,13 @@ export const Hero: React.FC = () => {
           </motion.h1>
         </div>
 
-        {/* Brand Description */}
+        {/* Brand Description — D17: use text-white/90 for AA contrast over dark scrim */}
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="text-sm sm:text-lg md:text-xl text-[#A0A0A0] max-w-2xl font-normal leading-relaxed mb-8 sm:mb-10"
+          className="text-sm sm:text-lg md:text-xl text-white/90 max-w-2xl font-normal leading-relaxed mb-8 sm:mb-10"
+          style={{ textShadow: '0 1px 8px rgba(8,8,8,0.9)' }}
         >
           {businessConfig.heroDescription}
         </motion.p>

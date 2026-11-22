@@ -55,8 +55,11 @@ export const Training: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/75 to-transparent" />
               </div>
 
-              {/* Number Badge */}
-              <div className="absolute top-5 left-5 font-['Anton',sans-serif] text-4xl text-white/20 group-hover:text-[#FF5A1F] transition-colors duration-300">
+              {/* Number Badge — aria-hidden: decorative index numeral, carries no info */}
+              <div
+                aria-hidden="true"
+                className="absolute top-5 left-5 font-['Anton',sans-serif] text-4xl text-white/20 group-hover:text-[#FF5A1F] transition-colors duration-300"
+              >
                 {item.number}
               </div>
 

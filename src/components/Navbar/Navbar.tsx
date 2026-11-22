@@ -126,7 +126,7 @@ export const Navbar: React.FC = () => {
                   key={link.name}
                   to={link.path}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative text-xs uppercase font-semibold tracking-widest transition-colors py-2 px-1 ${
+                  className={`relative text-xs uppercase font-semibold tracking-widest transition-colors py-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5A1F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808] rounded-sm ${
                     isActive ? 'text-[#FF5A1F]' : 'text-[#A0A0A0] hover:text-white'
                   }`}
                 >
@@ -145,7 +145,7 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={() => setIsPlanModalOpen(true)}
               title="Personalized Workout & Diet Plan Generator"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#FF5A1F] text-white hover:text-black border border-[#FF5A1F]/50 transition-all duration-300 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#FF5A1F] text-white hover:text-black border border-[#FF5A1F]/50 transition-all duration-300 text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5A1F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808]"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#FF5A1F] group-hover:text-black" />
               <span>Custom Plan</span>
