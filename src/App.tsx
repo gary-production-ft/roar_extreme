@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout/MainLayout';
 import { Home } from './pages/Home/Home';
 import { AuthProvider } from './context/AuthContext';
@@ -26,21 +26,55 @@ const PageLoader = () => (
   </div>
 );
 
-function ScrollToTop() {
-  const { pathname, hash } = useLocation();
+// In-memory scroll position cache keyed by location.key for popstate restoration
+const scrollHistoryMap = new Map<string, number>();
+
+function ScrollRestorationHandler() {
+  const location = useLocation();
+  const navigationType = useNavigationType();
+
+  // Record scroll position continuously for current history entry
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollHistoryMap.set(location.key, window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [location.key]);
 
   useEffect(() => {
-    if (hash) {
-      const element = document.getElementById(hash.replace('#', ''));
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
-    } else {
-      window.scrollTo(0, 0);
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const smoothBehavior: ScrollBehavior = prefersReduced ? 'instant' : 'smooth';
+
+    // Hash navigation (e.g. /#amenities, /#gallery, /#location)
+    if (location.hash) {
+      const targetId = location.hash.replace('#', '');
+      let attempts = 0;
+      const scrollToHashElement = () => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: smoothBehavior, block: 'start' });
+        } else if (attempts < 6) {
+          attempts++;
+          setTimeout(scrollToHashElement, 50 * attempts);
+        }
+      };
+      scrollToHashElement();
+      return;
     }
-  }, [pathname, hash]);
+
+    // Back / Forward browser navigation: restore exact scroll offset
+    if (navigationType === 'POP') {
+      const savedY = scrollHistoryMap.get(location.key);
+      if (typeof savedY === 'number') {
+        window.scrollTo({ top: savedY, left: 0, behavior: 'instant' });
+        return;
+      }
+    }
+
+    // Fresh route push / replace: reset scroll immediately to top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname, location.hash, location.key, navigationType]);
 
   return null;
 }
@@ -50,7 +84,7 @@ export function App() {
     <ErrorBoundary>
       <AuthProvider>
         <Router>
-          <ScrollToTop />
+          <ScrollRestorationHandler />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Website Routes */}
