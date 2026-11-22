@@ -49,15 +49,15 @@ export const About: React.FC = () => {
         </div>
       </section>
 
-      {/* Stats Counter Bar */}
+      {/* Stats Counter Bar (D10: clamp() scaling, whitespace-nowrap and equal-height cells) */}
       <section className="border-b border-white/10 bg-[#080808]">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-10 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 items-stretch">
           {stats.map((s, idx) => (
-            <div key={idx} className="border-l border-white/10 pl-6">
-              <span className="text-3xl md:text-5xl font-['Anton',sans-serif] text-white block">
+            <div key={idx} className="border-l border-white/10 pl-4 sm:pl-6 flex flex-col justify-between h-full">
+              <span className="text-[clamp(1.25rem,4vw,2.5rem)] font-['Anton',sans-serif] text-white block whitespace-nowrap leading-tight">
                 {s.value}
               </span>
-              <span className="text-xs uppercase tracking-widest text-[#A0A0A0] mt-1 block font-mono">
+              <span className="text-[10.5px] sm:text-xs uppercase tracking-wider sm:tracking-widest text-[#A0A0A0] mt-1.5 block font-mono">
                 {s.label}
               </span>
             </div>
