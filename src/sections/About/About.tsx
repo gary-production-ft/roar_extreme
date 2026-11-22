@@ -81,7 +81,7 @@ export const About: React.FC = () => {
             </p>
 
             <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed mb-8">
-              Operating on the 6th Floor Terrace at Rushiraj Regency, Vidya Vikas Circle, Gangapur Road, Roar Fitness provides an intense, focused training sanctuary. From general fitness seekers to seasoned lifters, we deliver an unyielding atmosphere where daily discipline produces real athletic outcomes.
+              Operating on the 6th Floor Terrace at Rushiraj Regency, Vidya Vikas Circle, Gangapur Road, Roar Extreme provides an intense, focused training sanctuary. From general fitness seekers to seasoned lifters, we deliver an unyielding atmosphere where daily discipline produces real athletic outcomes.
             </p>
 
             {/* Value Pillars */}
@@ -100,7 +100,7 @@ export const About: React.FC = () => {
                 CLAIM FREE PASS
               </AnimatedButton>
               <AnimatedButton to="/training" variant="outline" className="text-center py-3.5 sm:py-3 px-6 text-xs font-bold">
-                EXPLORE 8 DISCIPLINES
+                EXPLORE TRAINING PROGRAMS
               </AnimatedButton>
             </div>
           </motion.div>

@@ -20,8 +20,12 @@ export const Footer: React.FC = () => {
             <p className="text-sm text-[#A0A0A0] font-medium leading-relaxed mb-6">
               "{businessConfig.tagline}"
             </p>
-            <p className="text-xs text-white/50 leading-relaxed mb-4">
-              {businessConfig.city}'s dedicated athletic conditioning and training studio. General gym, strength, cardio, Zumba, CrossFit & kickboxing.
+            <p className="text-xs text-white/50 leading-relaxed mb-1">
+              {businessConfig.city}'s dedicated rooftop athletic conditioning arena. Strength, cardio, Zumba & CrossFit training.
+            </p>
+            {/* D15: Single factual note — Google / local directory lists the brand as Roar Fitness */}
+            <p className="text-[11px] text-white/30 leading-relaxed mb-4 font-mono">
+              Also listed locally as Roar Fitness.
             </p>
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <a
@@ -60,7 +64,7 @@ export const Footer: React.FC = () => {
                 <Link to="/about" className="hover:text-[#FF5A1F] transition-colors">About Facility</Link>
               </li>
               <li>
-                <Link to="/training" className="hover:text-[#FF5A1F] transition-colors">8 Training Disciplines</Link>
+                <Link to="/training" className="hover:text-[#FF5A1F] transition-colors">Training Programs</Link>
               </li>
               <li>
                 <Link to="/#amenities" className="hover:text-[#FF5A1F] transition-colors">Amenities & Facilities</Link>
@@ -89,7 +93,7 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Location & Contact */}
+          {/* Location & Contact — D16: phone hidden until owner confirms number */}
           <div>
             <h3 className="text-xs uppercase font-bold tracking-widest text-white mb-6 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-[#FF5A1F]" />
@@ -101,19 +105,21 @@ export const Footer: React.FC = () => {
               <p>{businessConfig.address.city}, {businessConfig.address.state}</p>
             </address>
 
-            <div className="p-3 bg-black/40 border border-white/5 text-[11px] text-white/60">
-              <span className="text-white/40 uppercase block mb-0.5">Directory Phone:</span>
-              <span className="font-mono text-[#FF5A1F] font-bold">{businessConfig.contact.phoneFormatted}</span>
-              <span className="block text-[10px] text-white/40 mt-1">Pending owner verification</span>
-            </div>
+            {/* D16: Only show phone if owner has verified it */}
+            {businessConfig.contact.isPhoneVerifiedByOwner && (
+              <div className="p-3 bg-black/40 border border-white/5 text-[11px] text-white/60">
+                <span className="text-white/40 uppercase block mb-0.5">Contact:</span>
+                <span className="font-mono text-[#FF5A1F] font-bold">{businessConfig.contact.phoneFormatted}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Bottom Bar */}
+        {/* Bottom Bar — D15: use brandIdentity, D16: remove Magicpin unverified claim */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-white/40 gap-4">
-          <p>© {CURRENT_YEAR} {businessConfig.name} Extreme {businessConfig.city}. All rights reserved.</p>
+          <p>© {CURRENT_YEAR} {businessConfig.brandIdentity} {businessConfig.city}. All rights reserved.</p>
           <p className="tracking-widest uppercase text-white/30">
-            Authentic Brand Integration • Verified Magicpin & Facebook Sources
+            Authentic Brand Integration • Verified Social Sources
           </p>
         </div>
       </div>

@@ -167,7 +167,7 @@ export const Location: React.FC = () => {
           >
             {/* Embed Map Canvas */}
             <iframe
-              title="Roar Fitness Official Studio Location Map"
+              title="Roar Extreme Official Studio Location Map"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3749.127546682664!2d73.7634457!3d20.0094151!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bddeb99f3d80043%3A0xe11b269b99a6d07e!2sRoar%20Fitness!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
               className="w-full h-full min-h-[300px] sm:min-h-[420px] border-0 filter grayscale invert contrast-125 opacity-80 hover:opacity-100 transition-opacity duration-500"
               allowFullScreen={false}

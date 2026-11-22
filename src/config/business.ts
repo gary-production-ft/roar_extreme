@@ -68,7 +68,7 @@ export interface BusinessConfig {
 }
 
 export const businessConfig: BusinessConfig = {
-  name: 'ROAR FITNESS',
+  name: 'ROAR EXTREME',
   brandIdentity: 'ROAR EXTREME',
   category: 'Fitness Studio & Athletic Conditioning Center',
   city: 'Nashik',
@@ -79,15 +79,15 @@ export const businessConfig: BusinessConfig = {
   tagline: 'TRAIN HARD. LIVE STRONG. ROAR LOUD.',
 
   heroDescription:
-    'Discover Roar Fitness Nashik. Build strength, improve performance and experience a dedicated fitness environment designed to push your limits.',
+    'Roar Extreme is Nashik\'s rooftop athletic conditioning arena — built for strength, endurance, and results. Train harder on the 6th Floor Terrace at Rushiraj Regency.',
 
   aboutHeadline: 'BUILT FOR STRENGTH. DRIVEN BY DISCIPLINE.',
   aboutDescription:
-    'Roar Fitness brings together gym training, strength development, cardio and fitness experiences in Nashik. Whether you are starting your fitness journey or looking to challenge yourself further, take your next step with Roar.',
+    'Roar Extreme brings together strength training, cardio, Zumba, CrossFit and functional conditioning under one rooftop arena in Nashik. Whether starting your fitness journey or pushing your limits, train in an environment built for real results.',
 
   freeSessionHeadline: 'YOUR FIRST SESSION IS ON US.',
   freeSessionDescription:
-    'Step inside Roar Fitness and experience the training environment for yourself. Apply for your complimentary single-session pass.',
+    'Step inside Roar Extreme and experience the training environment for yourself. Apply for your complimentary single-session pass — no commitment required.',
 
   address: {
     primary: '601/602, 6th Floor Terrace, Rushiraj Regency',
