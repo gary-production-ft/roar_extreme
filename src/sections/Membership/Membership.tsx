@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ShieldAlert, Sparkles, ArrowRight } from 'lucide-react';
+import { Check, PhoneCall, Sparkles, ArrowRight, MessageSquare } from 'lucide-react';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { AnimatedButton } from '../../components/AnimatedButton/AnimatedButton';
 import { membershipConfig } from '../../config/membership';
@@ -22,7 +22,7 @@ export const Membership: React.FC = () => {
         />
 
         {!isPublished ? (
-          /* Unpublished / Verification State */
+          /* D16: Pricing not yet confirmed by owner — clean CTA instead of placeholder banner */
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -30,25 +30,30 @@ export const Membership: React.FC = () => {
             className="max-w-3xl mx-auto bg-[#171717] border border-white/10 p-8 text-center"
           >
             <div className="w-12 h-12 rounded-full bg-[#FF5A1F]/10 border border-[#FF5A1F] mx-auto flex items-center justify-center text-[#FF5A1F] mb-4">
-              <ShieldAlert className="w-6 h-6" />
+              <PhoneCall className="w-6 h-6" />
             </div>
 
             <h3 className="text-2xl font-['Anton',sans-serif] uppercase text-white mb-2">
-              PRICING PLANS UNDER OWNER CONFIRMATION
+              CONTACT US FOR MEMBERSHIP PLANS
             </h3>
 
-            <p className="text-sm text-[#A0A0A0] leading-relaxed max-w-xl mx-auto mb-6">
-              {membershipConfig.unverifiedDisclaimer}
+            <p className="text-sm text-[#A0A0A0] leading-relaxed max-w-xl mx-auto mb-8">
+              Our membership plans are tailored to your goals. Reach out directly to get the latest plan details and secure your spot at Roar Extreme Nashik.
             </p>
-
-            <div className="p-4 bg-black/40 border border-white/5 text-xs text-white/60 mb-6 font-mono">
-              Directory catalogue rates on record (1 Month: ₹6,500+, 3 Months: ₹8,500+, 1 Year: ₹12,000+). Live online enrollment will activate once officially validated by Roar Fitness management.
-            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <AnimatedButton to="/register" variant="primary" className="py-3 px-6 text-xs">
-                CLAIM FREE SESSION PASS FIRST <ArrowRight className="w-4 h-4 ml-1" />
+                CLAIM FREE SESSION FIRST <ArrowRight className="w-4 h-4 ml-1" />
               </AnimatedButton>
+              <a
+                href={`https://wa.me/${businessConfig.contact.phone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-white/20 text-white text-xs font-bold uppercase tracking-wider hover:border-[#FF5A1F] hover:text-[#FF5A1F] transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                WHATSAPP INQUIRY
+              </a>
             </div>
           </motion.div>
         ) : (
