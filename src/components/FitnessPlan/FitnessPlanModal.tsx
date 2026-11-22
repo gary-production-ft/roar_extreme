@@ -7,6 +7,8 @@ import {
   Target,
   AlertTriangle,
   Printer,
+  Download,
+  Check,
   ThumbsUp,
   ThumbsDown,
   UserCheck,
@@ -20,6 +22,7 @@ import {
   type ValidatedFitnessPlan,
 } from '../../schemas/fitnessPlanResponseSchema';
 import { ErrorBoundary } from '../ErrorBoundary/ErrorBoundary';
+import { downloadPlanPdf } from '../../utils/generatePlanPdf';
 
 interface FitnessPlanModalProps {
   isOpen: boolean;
@@ -55,6 +58,7 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
   // Result Plan
   const [planResult, setPlanResult] = useState<ValidatedFitnessPlan | null>(null);
   const [userRating, setUserRating] = useState<'up' | 'down' | null>(null);
+  const [isDownloaded, setIsDownloaded] = useState(false);
 
   // Cancellation & Double-Submit Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -106,10 +110,10 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
     };
 
     try {
-      // 1. Attempt generation from backend API with 20s timeout
+      // 1. Attempt generation from backend API with responsive 6s timeout
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
       const res = await fetch(apiUrl('/api/fitness-plans/generate'), {
         method: 'POST',
@@ -135,7 +139,7 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
       }
     } catch (apiErr: any) {
       if (apiErr.name === 'AbortError') {
-        console.warn('Backend plan API request timed out after 20s. Running client clinical engine.');
+        console.warn('Backend plan API request timed out after 6s. Running fast client clinical engine.');
       } else {
         console.warn('Backend plan API offline. Running ROAR Client Clinical Engine fallback:', apiErr);
       }
@@ -700,23 +704,49 @@ export const FitnessPlanModal: React.FC<FitnessPlanModalProps> = ({
 
               {/* Actions & Rating Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/10">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Instant Download Action — zero delay, direct PDF save */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (planResult) {
+                        downloadPlanPdf(planResult);
+                        setIsDownloaded(true);
+                        setTimeout(() => setIsDownloaded(false), 3000);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#FF5A1F] hover:bg-[#FF7545] text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(255,90,31,0.3)] hover:shadow-[0_0_20px_rgba(255,90,31,0.5)] cursor-pointer"
+                  >
+                    {isDownloaded ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                        <span>PDF Downloaded!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-3.5 h-3.5 text-white" />
+                        <span>Save &amp; Download PDF</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-[11px] border border-white/10 transition-colors cursor-pointer"
+                    title="Print via system dialog"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs border border-white/10 transition-colors cursor-pointer"
                   >
-                    <Printer className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                    <span>Print / Save</span>
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Print</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setShowTrainerModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF5A1F]/15 hover:bg-[#FF5A1F] text-[#FF5A1F] hover:text-black border border-[#FF5A1F]/30 text-[11px] font-bold transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF5A1F]/15 hover:bg-[#FF5A1F] text-[#FF5A1F] hover:text-black border border-[#FF5A1F]/30 text-xs font-bold transition-all cursor-pointer"
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>Request Trainer Review</span>
+                    <span>Trainer Review</span>
                   </button>
                 </div>
 
